@@ -56,7 +56,9 @@ const RULE_TEMPLATES = {
     },
 };
 
-export default function NewPricingRulePage() {
+import { Suspense } from 'react';
+
+function PricingRuleForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const templateId = searchParams.get('template');
@@ -489,5 +491,13 @@ export default function NewPricingRulePage() {
                 </form>
             </div>
         </div>
+    );
+}
+
+export default function NewPricingRulePage() {
+    return (
+        <Suspense fallback={<div className="p-8">Loading form...</div>}>
+            <PricingRuleForm />
+        </Suspense>
     );
 }
