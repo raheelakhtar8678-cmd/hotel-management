@@ -92,8 +92,8 @@ export default function NewPricingRulePage() {
                 rule_type: template.ruleType,
                 action_type: template.action.type,
                 action_value: template.action.value.toString(),
-                days_before_checkin: template.conditions.days_before_checkin?.toString() || '',
-                min_nights: template.conditions.min_length?.toString() || '',
+                days_before_checkin: (template.conditions as any).days_before_checkin?.toString() || '',
+                min_nights: (template.conditions as any).min_length?.toString() || '',
             }));
         }
     }, [templateId]);
