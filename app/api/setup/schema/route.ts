@@ -223,11 +223,11 @@ export async function POST(request: Request) {
   } finally {
     if (client) client.release();
   }
-  // ... POST handler ...
+}
 
-  export async function GET() {
-    return NextResponse.json({
-      success: true,
-      sql: SCHEMA_SQL
-    });
-  }
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    sql: SCHEMA_SQL
+  });
+}
