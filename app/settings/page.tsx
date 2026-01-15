@@ -233,12 +233,40 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
 
                             <Button
                                 onClick={async () => {
-                                    setSaving(true);
+                                    // Check if we are on localhost
+                                    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
                                     const url = (document.getElementById('supabaseUrl') as HTMLInputElement).value;
                                     const anon = (document.getElementById('supabaseAnonKey') as HTMLInputElement).value;
                                     const service = (document.getElementById('supabaseServiceKey') as HTMLInputElement).value;
                                     const pass = (document.getElementById('dbPassword') as HTMLInputElement).value;
 
+                                    // If on Vercel/Production, we can't write to files.
+                                    // Show instructions instead.
+                                    if (!isLocalhost) {
+                                        const projectRef = url.replace('https://', '').replace('.supabase.co', '');
+                                        const dbUrl = pass
+                                            ? `postgresql://postgres:${pass}@db.${projectRef}.supabase.co:5432/postgres`
+                                            : "postgresql://postgres:[YOUR_PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres";
+
+                                        const envBlock = `NEXT_PUBLIC_SUPABASE_URL=${url}
+NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon}
+SUPABASE_SERVICE_ROLE_KEY=${service}
+DATABASE_URL=${dbUrl}
+CRON_SECRET=${Math.random().toString(36).substring(7)}`;
+
+                                        alert("ℹ️ You are on the Live Site (Vercel).\n\n" +
+                                            "You cannot write to files here. You must set these variables in the Vercel Dashboard.\n\n" +
+                                            "1. Go to Vercel Project Settings → Environment Variables\n" +
+                                            "2. Copy and paste these values:\n\n" +
+                                            "--- COPY BELOW ---\n" + envBlock + "\n------------------\n\n" +
+                                            "I have copied this to your clipboard!");
+
+                                        navigator.clipboard.writeText(envBlock);
+                                        return;
+                                    }
+
+                                    setSaving(true);
                                     try {
                                         const res = await fetch('/api/setup/env', {
                                             method: 'POST',
@@ -257,8 +285,8 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
                                         } else {
                                             alert("Failed: " + data.error);
                                         }
-                                    } catch (e) {
-                                        alert("Error saving configuration");
+                                    } catch (e: any) {
+                                        alert("Error saving configuration: " + e.message);
                                     } finally {
                                         setSaving(false);
                                     }
@@ -266,7 +294,7 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
                                 disabled={saving}
                                 className="w-full"
                             >
-                                {saving ? "Saving & Connecting..." : "Save Connection Settings"}
+                                {saving ? "Saving..." : "Save Connection Settings"}
                             </Button>
                         </div>
 
