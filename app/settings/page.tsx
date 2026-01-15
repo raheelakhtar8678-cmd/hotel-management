@@ -193,13 +193,29 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
                                         try {
                                             const pass = (document.getElementById('dbPassword') as HTMLInputElement).value;
                                             const url = (document.getElementById('supabaseUrl') as HTMLInputElement).value;
-                                            const manualString = (document.getElementById('connectionString') as HTMLInputElement)?.value;
+                                            // Sanitize the manual string if present
+                                            let manualString = (document.getElementById('connectionString') as HTMLInputElement)?.value?.trim();
+
+                                            // FIX: Users often copy the brackets [password] from docs. Remove them.
+                                            // Regex looks for :[... content ...]@ and removes the brackets.
+                                            if (manualString && manualString.includes(':[') && manualString.includes(']@')) {
+                                                console.log("Detected brackets in password, cleaning...");
+                                                manualString = manualString.replace(/:\[([^\]]+)\]@/, ':$1@');
+                                                // Update the input to show the fixed version
+                                                (document.getElementById('connectionString') as HTMLInputElement).value = manualString;
+                                                alert("Fixed: I removed the square brackets [] from your password. Trying again...");
+                                            }
 
                                             // Construct DB URL
                                             let connectionString = manualString;
                                             if (!connectionString && url && pass) {
                                                 const projectRef = url.replace('https://', '').replace('.supabase.co', '');
                                                 connectionString = `postgresql://postgres:${pass}@db.${projectRef}.supabase.co:5432/postgres`;
+                                            }
+
+                                            if (connectionString && connectionString.includes('db.') && connectionString.includes('.supabase.co')) {
+                                                // Suggest Pooler if using direct connection (which fails on Vercel sometimes due to IPv6)
+                                                console.log("Using direct DB connection. Pooler is preferred.");
                                             }
 
                                             alert("Initializing database schema... Please wait.");
