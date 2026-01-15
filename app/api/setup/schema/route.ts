@@ -184,43 +184,50 @@ CREATE POLICY "Public read calendar_connections" ON calendar_connections FOR SEL
 `;
 
 export async function POST(request: Request) {
-    let client;
-    try {
-        const { connectionString } = await request.json();
+  let client;
+  try {
+    const { connectionString } = await request.json();
 
-        // Use provided string or env var
-        const dbUrl = connectionString || process.env.DATABASE_URL;
+    // Use provided string or env var
+    const dbUrl = connectionString || process.env.DATABASE_URL;
 
-        if (!dbUrl) {
-            return NextResponse.json(
-                { success: false, error: 'DATABASE_URL is missing. Please set it in Settings.' },
-                { status: 400 }
-            );
-        }
-
-        // Connect to Postgres
-        const pool = new Pool({
-            connectionString: dbUrl,
-            ssl: { rejectUnauthorized: false } // Required for Supabase transaction pooler
-        });
-
-        client = await pool.connect();
-
-        // Run Schema
-        await client.query(SCHEMA_SQL);
-
-        return NextResponse.json({
-            success: true,
-            message: 'Database initialized successfully! All tables created.'
-        });
-
-    } catch (error: any) {
-        console.error('Schema setup error:', error);
-        return NextResponse.json(
-            { success: false, error: error.message || 'Failed to initialize database' },
-            { status: 500 }
-        );
-    } finally {
-        if (client) client.release();
+    if (!dbUrl) {
+      return NextResponse.json(
+        { success: false, error: 'DATABASE_URL is missing. Please set it in Settings.' },
+        { status: 400 }
+      );
     }
-}
+
+    // Connect to Postgres
+    const pool = new Pool({
+      connectionString: dbUrl,
+      ssl: { rejectUnauthorized: false } // Required for Supabase transaction pooler
+    });
+
+    client = await pool.connect();
+
+    // Run Schema
+    await client.query(SCHEMA_SQL);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Database initialized successfully! All tables created.'
+    });
+
+  } catch (error: any) {
+    console.error('Schema setup error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to initialize database' },
+      { status: 500 }
+    );
+  } finally {
+    if (client) client.release();
+  }
+  // ... POST handler ...
+
+  export async function GET() {
+    return NextResponse.json({
+      success: true,
+      sql: SCHEMA_SQL
+    });
+  }
