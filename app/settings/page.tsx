@@ -82,8 +82,43 @@ export default function SettingsPage() {
 
     const testConnection = async () => {
         setTesting(true);
-        await checkConnection();
-        setTesting(false);
+
+        // Get values directly from inputs to test what the user just typed
+        const url = (document.getElementById('supabaseUrl') as HTMLInputElement).value;
+        const service = (document.getElementById('supabaseServiceKey') as HTMLInputElement).value; // Use service key for admin test
+        const anon = (document.getElementById('supabaseAnonKey') as HTMLInputElement).value;
+
+        if (!url || !service) {
+            alert("Please enter at least the Project URL and Service Role Key to test.");
+            setTesting(false);
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/setup/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    supabaseUrl: url,
+                    supabaseAnonKey: anon,
+                    supabaseServiceKey: service
+                })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                setConnectionStatus('connected');
+                alert("Connection Successful! ✅\n\nYou can now click 'Save Connection Settings' to apply these changes.");
+            } else {
+                setConnectionStatus('disconnected');
+                alert(`Connection Failed ❌\n\nError: ${data.error}\n\nPlease check your keys and URL.`);
+            }
+        } catch (e: any) {
+            alert(`Test failed: ${e.message}`);
+            setConnectionStatus('disconnected');
+        } finally {
+            setTesting(false);
+        }
     };
 
     const copyToClipboard = (text: string) => {
