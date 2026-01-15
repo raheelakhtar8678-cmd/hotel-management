@@ -66,7 +66,7 @@ export class ICalParser {
                 let status: 'confirmed' | 'tentative' | 'cancelled' = 'confirmed';
                 const statusProp = vevent.getFirstPropertyValue('status');
                 if (statusProp) {
-                    const statusStr = statusProp.toLowerCase();
+                    const statusStr = String(statusProp).toLowerCase();
                     if (statusStr === 'tentative') status = 'tentative';
                     if (statusStr === 'cancelled') status = 'cancelled';
                 }
