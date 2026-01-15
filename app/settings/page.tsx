@@ -1,0 +1,359 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Database, Key, CheckCircle2, XCircle, AlertCircle, Copy, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+
+export default function SettingsPage() {
+    const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+    const [settings, setSettings] = useState({
+        floor_price: '',
+        ceiling_price: '',
+        openai_key: '',
+        gemini_key: '',
+    });
+    const [saving, setSaving] = useState(false);
+    const [testing, setTesting] = useState(false);
+
+    useEffect(() => {
+        checkConnection();
+        loadSettings();
+    }, []);
+
+    const checkConnection = async () => {
+        setConnectionStatus('checking');
+        try {
+            const response = await fetch('/api/properties');
+            const data = await response.json();
+            setConnectionStatus(data.success ? 'connected' : 'disconnected');
+        } catch (error) {
+            setConnectionStatus('disconnected');
+        }
+    };
+
+    const loadSettings = async () => {
+        try {
+            const response = await fetch('/api/settings');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.settings) {
+                    const settingsMap: any = {};
+                    data.settings.forEach((s: any) => {
+                        settingsMap[s.key] = s.value;
+                    });
+                    setSettings({
+                        floor_price: settingsMap.floor_price || '99',
+                        ceiling_price: settingsMap.ceiling_price || '400',
+                        openai_key: settingsMap.openai_key || '',
+                        gemini_key: settingsMap.gemini_key || '',
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+        }
+    };
+
+    const saveSettings = async () => {
+        setSaving(true);
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings),
+            });
+
+            if (response.ok) {
+                alert('Settings saved successfully!');
+            } else {
+                alert('Failed to save settings');
+            }
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            alert('Network error. Please try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const testConnection = async () => {
+        setTesting(true);
+        await checkConnection();
+        setTesting(false);
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        alert('Copied to clipboard!');
+    };
+
+    const getEnvExample = () => {
+        return `NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...your-service-key
+CRON_SECRET=your-cron-secret
+DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres`;
+    };
+
+    return (
+        <div className="flex-1 p-8 pt-6">
+            <div className="mb-6">
+                <h2 className="text-3xl font-bold tracking-tight gradient-text mb-2">
+                    Settings
+                </h2>
+                <p className="text-muted-foreground">
+                    Configure your YieldVibe instance and API connections
+                </p>
+            </div>
+
+            <div className="max-w-4xl space-y-6">
+                {/* Database Connection Status & Setup */}
+                <Card className="glass-card">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Database className="h-5 w-5 text-primary" />
+                                <CardTitle>Database Connection</CardTitle>
+                            </div>
+                            {connectionStatus === 'connected' && (
+                                <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Connected
+                                </Badge>
+                            )}
+                            {connectionStatus === 'disconnected' && (
+                                <Badge variant="destructive">
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    Disconnected
+                                </Badge>
+                            )}
+                            {connectionStatus === 'checking' && (
+                                <Badge variant="outline">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Checking...
+                                </Badge>
+                            )}
+                        </div>
+                        <CardDescription>Configure your Supabase connection</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {connectionStatus === 'connected' ? (
+                            <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 mb-4">
+                                <p className="text-sm font-semibold text-emerald-500 mb-2">
+                                    ✅ Successfully Connected
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Your Supabase database is active.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 mb-4">
+                                <p className="text-sm font-semibold text-amber-500 mb-2">
+                                    ⚠️ Connection Required
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Enter your Supabase credentials below to connect.
+                                </p>
+                            </div>
+                        )}
+
+                        <div className="space-y-4 border-t pt-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="supabaseUrl">Project URL</Label>
+                                <Input
+                                    id="supabaseUrl"
+                                    placeholder="https://your-project.supabase.co"
+                                    defaultValue={process.env.NEXT_PUBLIC_SUPABASE_URL}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="supabaseAnonKey">Anon Public Key</Label>
+                                <Input
+                                    id="supabaseAnonKey"
+                                    type="password"
+                                    placeholder="your-anon-key"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="supabaseServiceKey">Service Role Key (Secret)</Label>
+                                <Input
+                                    id="supabaseServiceKey"
+                                    type="password"
+                                    placeholder="your-service-role-key"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="dbPassword">Database Password</Label>
+                                <Input
+                                    id="dbPassword"
+                                    type="password"
+                                    placeholder="Your database password (for connection string)"
+                                />
+                                <p className="text-xs text-muted-foreground">Required to generate the DATABASE_URL connection string.</p>
+                            </div>
+
+                            <Button
+                                onClick={async () => {
+                                    setSaving(true);
+                                    const url = (document.getElementById('supabaseUrl') as HTMLInputElement).value;
+                                    const anon = (document.getElementById('supabaseAnonKey') as HTMLInputElement).value;
+                                    const service = (document.getElementById('supabaseServiceKey') as HTMLInputElement).value;
+                                    const pass = (document.getElementById('dbPassword') as HTMLInputElement).value;
+
+                                    try {
+                                        const res = await fetch('/api/setup/env', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                supabaseUrl: url,
+                                                supabaseAnonKey: anon,
+                                                supabaseServiceKey: service,
+                                                dbPassword: pass
+                                            })
+                                        });
+                                        const data = await res.json();
+                                        if (data.success) {
+                                            alert("Configuration saved! The server will restart automatically. Please wait 5 seconds and refresh the page.");
+                                            setTimeout(() => window.location.reload(), 5000);
+                                        } else {
+                                            alert("Failed: " + data.error);
+                                        }
+                                    } catch (e) {
+                                        alert("Error saving configuration");
+                                    } finally {
+                                        setSaving(false);
+                                    }
+                                }}
+                                disabled={saving}
+                                className="w-full"
+                            >
+                                {saving ? "Saving & Connecting..." : "Save Connection Settings"}
+                            </Button>
+                        </div>
+
+                        <Button
+                            onClick={testConnection}
+                            disabled={testing}
+                            variant="outline"
+                            className="w-full mt-2"
+                        >
+                            {testing ? 'Testing...' : 'Test Connection'}
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                {/* Price Limits */}
+                <Card className="glass-card">
+                    <CardHeader>
+                        <CardTitle>Price Limits</CardTitle>
+                        <CardDescription>Set global min/max price constraints</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="floor_price">Minimum Price (Floor)</Label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                        $
+                                    </span>
+                                    <Input
+                                        id="floor_price"
+                                        type="number"
+                                        min="0"
+                                        value={settings.floor_price}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, floor_price: e.target.value }))}
+                                        className="pl-7"
+                                    />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Prices won't go below this amount
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="ceiling_price">Maximum Price (Ceiling)</Label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                        $
+                                    </span>
+                                    <Input
+                                        id="ceiling_price"
+                                        type="number"
+                                        min="0"
+                                        value={settings.ceiling_price}
+                                        onChange={(e) => setSettings(prev => ({ ...prev, ceiling_price: e.target.value }))}
+                                        className="pl-7"
+                                    />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Prices won't go above this amount
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* API Keys */}
+                <Card className="glass-card">
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <Key className="h-5 w-5 text-primary" />
+                            <CardTitle>API Keys (Optional)</CardTitle>
+                        </div>
+                        <CardDescription>Configure third-party integrations</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="openai_key">OpenAI API Key</Label>
+                            <Input
+                                id="openai_key"
+                                type="password"
+                                value={settings.openai_key}
+                                onChange={(e) => setSettings(prev => ({ ...prev, openai_key: e.target.value }))}
+                                placeholder="sk-..."
+                                className="font-mono"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                For AI insights generation. Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" className="text-primary underline">OpenAI</a>
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="gemini_key">Google Gemini API Key</Label>
+                            <Input
+                                id="gemini_key"
+                                type="password"
+                                value={settings.gemini_key}
+                                onChange={(e) => setSettings(prev => ({ ...prev, gemini_key: e.target.value }))}
+                                placeholder="AI..."
+                                className="font-mono"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Alternative AI provider. Get your key at <a href="https://makersuite.google.com/app/apikey" target="_blank" className="text-primary underline">Google AI Studio</a>
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Save Button */}
+                <Button
+                    onClick={saveSettings}
+                    disabled={saving || connectionStatus === 'disconnected'}
+                    className="w-full bg-gradient-primary hover:opacity-90"
+                >
+                    {saving ? 'Saving...' : 'Save Settings'}
+                </Button>
+
+                {connectionStatus === 'disconnected' && (
+                    <p className="text-xs text-center text-muted-foreground">
+                        Connect database first to save settings
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}

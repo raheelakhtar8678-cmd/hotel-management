@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Local env files
+.env*.local
+.env
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Debug logs
+*.log
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+*.pem
+.vercel
