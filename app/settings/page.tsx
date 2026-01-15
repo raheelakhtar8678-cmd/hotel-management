@@ -193,10 +193,11 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
                                         try {
                                             const pass = (document.getElementById('dbPassword') as HTMLInputElement).value;
                                             const url = (document.getElementById('supabaseUrl') as HTMLInputElement).value;
+                                            const manualString = (document.getElementById('connectionString') as HTMLInputElement)?.value;
 
-                                            // Construct DB URL for the API if we have the password
-                                            let connectionString = undefined;
-                                            if (url && pass) {
+                                            // Construct DB URL
+                                            let connectionString = manualString;
+                                            if (!connectionString && url && pass) {
                                                 const projectRef = url.replace('https://', '').replace('.supabase.co', '');
                                                 connectionString = `postgresql://postgres:${pass}@db.${projectRef}.supabase.co:5432/postgres`;
                                             }
@@ -268,6 +269,21 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
                                 <p className="text-xs text-muted-foreground">Required to generate the DATABASE_URL connection string.</p>
                             </div>
 
+                            <div className="grid gap-2 pt-2 border-t border-dashed">
+                                <Label htmlFor="connectionString" className="flex items-center gap-2">
+                                    Manual Connection String
+                                    <Badge variant="outline" className="text-[10px] h-4">Optional</Badge>
+                                </Label>
+                                <Input
+                                    id="connectionString"
+                                    placeholder="postgresql://postgres:[password]@db.[ref].supabase.co:5432/postgres"
+                                    className="font-mono text-xs"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    If you get DNS errors, paste the full connection string from Supabase here (Settings → Database).
+                                </p>
+                            </div>
+
                             <Button
                                 onClick={async () => {
                                     // Check if we are on localhost
@@ -277,15 +293,20 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
                                     const anon = (document.getElementById('supabaseAnonKey') as HTMLInputElement).value;
                                     const service = (document.getElementById('supabaseServiceKey') as HTMLInputElement).value;
                                     const pass = (document.getElementById('dbPassword') as HTMLInputElement).value;
+                                    const manualString = (document.getElementById('connectionString') as HTMLInputElement).value;
+
+                                    // Calculate DB URL
+                                    let dbUrl = "";
+                                    if (manualString) {
+                                        dbUrl = manualString;
+                                    } else if (url && pass) {
+                                        const projectRef = url.replace('https://', '').replace('.supabase.co', '');
+                                        dbUrl = `postgresql://postgres:${pass}@db.${projectRef}.supabase.co:5432/postgres`;
+                                    }
 
                                     // If on Vercel/Production, we can't write to files.
                                     // Show instructions instead.
                                     if (!isLocalhost) {
-                                        const projectRef = url.replace('https://', '').replace('.supabase.co', '');
-                                        const dbUrl = pass
-                                            ? `postgresql://postgres:${pass}@db.${projectRef}.supabase.co:5432/postgres`
-                                            : "postgresql://postgres:[YOUR_PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres";
-
                                         const envBlock = `NEXT_PUBLIC_SUPABASE_URL=${url}
 NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon}
 SUPABASE_SERVICE_ROLE_KEY=${service}
@@ -312,7 +333,8 @@ CRON_SECRET=${Math.random().toString(36).substring(7)}`;
                                                 supabaseUrl: url,
                                                 supabaseAnonKey: anon,
                                                 supabaseServiceKey: service,
-                                                dbPassword: pass
+                                                dbPassword: pass,
+                                                connectionString: manualString
                                             })
                                         });
                                         const data = await res.json();

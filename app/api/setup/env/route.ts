@@ -47,7 +47,9 @@ export async function POST(request: Request) {
         // If the user wants full DB connection they might need to update DATABASE_URL manually or we add a password field.
 
         // Let's add a password field to the request!
-        if (body.dbPassword) {
+        if (body.connectionString) {
+            updateEnvVar('DATABASE_URL', body.connectionString);
+        } else if (body.dbPassword) {
             const projectRef = supabaseUrl.replace('https://', '').replace('.supabase.co', '');
             const dbUrl = `postgresql://postgres:${body.dbPassword}@db.${projectRef}.supabase.co:5432/postgres`;
             updateEnvVar('DATABASE_URL', dbUrl);
