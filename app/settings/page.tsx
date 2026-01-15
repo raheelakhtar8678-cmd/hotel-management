@@ -181,9 +181,46 @@ DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/pos
                                 <p className="text-sm font-semibold text-emerald-500 mb-2">
                                     ✅ Successfully Connected
                                 </p>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-sm text-muted-foreground mb-4">
                                     Your Supabase database is active.
                                 </p>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10"
+                                    onClick={async () => {
+                                        if (!confirm("This will create all necessary tables if they don't exist. Continue?")) return;
+                                        try {
+                                            const pass = (document.getElementById('dbPassword') as HTMLInputElement).value;
+                                            const url = (document.getElementById('supabaseUrl') as HTMLInputElement).value;
+
+                                            // Construct DB URL for the API if we have the password
+                                            let connectionString = undefined;
+                                            if (url && pass) {
+                                                const projectRef = url.replace('https://', '').replace('.supabase.co', '');
+                                                connectionString = `postgresql://postgres:${pass}@db.${projectRef}.supabase.co:5432/postgres`;
+                                            }
+
+                                            alert("Initializing database schema... Please wait.");
+                                            const res = await fetch('/api/setup/schema', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ connectionString })
+                                            });
+                                            const data = await res.json();
+                                            if (data.success) {
+                                                alert("Database initialized successfully! 🎉\n\nYou can now create properties and bookings.");
+                                            } else {
+                                                alert("Setup failed: " + data.error);
+                                            }
+                                        } catch (e: any) {
+                                            alert("Error: " + e.message);
+                                        }
+                                    }}
+                                >
+                                    <Database className="h-4 w-4 mr-2" />
+                                    Initialize / Repair Tables
+                                </Button>
                             </div>
                         ) : (
                             <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 mb-4">
