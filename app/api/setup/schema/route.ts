@@ -119,6 +119,23 @@ CREATE TABLE IF NOT EXISTS calendar_connections (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Room Extras Table (Additional items/services for rooms)
+CREATE TABLE IF NOT EXISTS room_extras (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    room_id UUID REFERENCES rooms(id) ON DELETE CASCADE NOT NULL,
+    booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
+    item_name TEXT NOT NULL,
+    item_category TEXT CHECK (item_category IN ('food', 'beverage', 'service', 'amenity', 'other')) DEFAULT 'other',
+    price NUMERIC NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    description TEXT,
+    status TEXT CHECK (status IN ('pending', 'charged', 'cancelled')) DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_extras_room_id ON room_extras(room_id);
+CREATE INDEX IF NOT EXISTS idx_room_extras_booking_id ON room_extras(booking_id);
+
 -- Add external_id to bookings if not exists
 DO $$ 
 BEGIN 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PropertySelector } from "./property-selector";
+import { GlobalSearch } from "./global-search";
 import { Building2, LayoutDashboard, Package, Settings, Calendar, FileText, Menu, X, Zap } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
@@ -65,8 +66,9 @@ export function MainNav() {
                         })}
                     </nav>
 
-                    {/* Property Selector (Desktop) */}
-                    <div className="hidden lg:flex">
+                    {/* Search (Desktop) */}
+                    <div className="hidden lg:flex items-center gap-3">
+                        <GlobalSearch />
                         <PropertySelector />
                     </div>
 
