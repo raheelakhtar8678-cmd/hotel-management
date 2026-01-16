@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PropertySelector } from "./property-selector";
 import { GlobalSearch } from "./global-search";
-import { Building2, LayoutDashboard, Package, Settings, Calendar, FileText, Menu, X, Zap } from "lucide-react";
+import { Building2, LayoutDashboard, Package, Settings, Calendar, FileText, Menu, X, Zap, Calculator } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 
@@ -17,6 +17,7 @@ export function MainNav() {
         { href: "/properties", label: "Properties", icon: Building2 },
         { href: "/inventory", label: "Inventory", icon: Package },
         { href: "/pricing-rules", label: "Pricing Rules", icon: Zap },
+        { href: "/calculator", label: "Calculator", icon: Calculator },
         { href: "/calendar", label: "Calendar", icon: Calendar },
         { href: "/reports", label: "Reports", icon: FileText },
         { href: "/settings", label: "Settings", icon: Settings },

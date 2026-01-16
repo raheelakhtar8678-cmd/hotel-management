@@ -1,4 +1,4 @@
-import { adminClient } from '@/lib/supabase/admin';
+import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -6,16 +6,16 @@ export const dynamic = 'force-dynamic';
 // GET: Fetch all pricing rules
 export async function GET() {
     try {
-        const { data: rules, error } = await adminClient
-            .from('pricing_rules')
-            .select('*, properties(name)')
-            .order('priority', { ascending: false });
-
-        if (error) throw error;
+        const { rows } = await sql`
+            SELECT pr.*, p.name as property_name
+            FROM pricing_rules pr
+            LEFT JOIN properties p ON pr.property_id = p.id
+            ORDER BY pr.priority DESC
+        `;
 
         return NextResponse.json({
             success: true,
-            rules: rules || []
+            rules: rows || []
         });
     } catch (error) {
         console.error('Error fetching pricing rules:', error);
@@ -37,12 +37,11 @@ export async function POST(request: Request) {
             priority,
             is_active,
             conditions,
-            action,
             date_from,
             date_to,
             days_of_week,
-            min_nights,
-            max_nights
+            adjustment_type,
+            adjustment_value
         } = body;
 
         if (!property_id || !name || !rule_type) {
@@ -52,30 +51,22 @@ export async function POST(request: Request) {
             );
         }
 
-        const { data: rule, error } = await adminClient
-            .from('pricing_rules')
-            .insert({
-                property_id,
-                name,
-                rule_type,
-                priority: priority || 0,
-                is_active: is_active !== false,
-                conditions: conditions || {},
-                action: action || {},
-                date_from: date_from || null,
-                date_to: date_to || null,
-                days_of_week: days_of_week || null,
-                min_nights: min_nights || null,
-                max_nights: max_nights || null,
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
+        const { rows } = await sql`
+            INSERT INTO pricing_rules (
+                property_id, name, rule_type, priority, is_active,
+                conditions, date_from, date_to, days_of_week,
+                adjustment_type, adjustment_value
+            ) VALUES (
+                ${property_id}, ${name}, ${rule_type}, ${priority || 0}, ${is_active !== false},
+                ${JSON.stringify(conditions || {})}, ${date_from || null}, ${date_to || null},
+                ${days_of_week || null}, ${adjustment_type || 'percentage'}, ${adjustment_value || 0}
+            )
+            RETURNING *
+        `;
 
         return NextResponse.json({
             success: true,
-            rule
+            rule: rows[0]
         });
     } catch (error) {
         console.error('Error creating pricing rule:', error);
@@ -99,18 +90,32 @@ export async function PATCH(request: Request) {
             );
         }
 
-        const { data: rule, error } = await adminClient
-            .from('pricing_rules')
-            .update(updates)
-            .eq('id', id)
-            .select()
-            .single();
+        // Build update query dynamically
+        const updateFields: string[] = [];
+        const updateValues: any[] = [];
+        let paramIndex = 1;
 
-        if (error) throw error;
+        Object.entries(updates).forEach(([key, value]) => {
+            updateFields.push(`${key} = $${paramIndex}`);
+            updateValues.push(value);
+            paramIndex++;
+        });
+
+        if (updateFields.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'No fields to update' },
+                { status: 400 }
+            );
+        }
+
+        const { rows } = await sql.query(
+            `UPDATE pricing_rules SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+            [...updateValues, id]
+        );
 
         return NextResponse.json({
             success: true,
-            rule
+            rule: rows[0]
         });
     } catch (error) {
         console.error('Error updating pricing rule:', error);
@@ -134,12 +139,7 @@ export async function DELETE(request: Request) {
             );
         }
 
-        const { error } = await adminClient
-            .from('pricing_rules')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
+        await sql`DELETE FROM pricing_rules WHERE id = ${id}`;
 
         return NextResponse.json({
             success: true,

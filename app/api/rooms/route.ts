@@ -3,24 +3,28 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// GET: Fetch rooms by property_id
+// GET: Fetch rooms by property_id (optional)
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const property_id = searchParams.get('property_id');
 
-        if (!property_id) {
-            return NextResponse.json(
-                { success: false, error: 'Property ID is required' },
-                { status: 400 }
-            );
+        let query;
+        if (property_id) {
+            query = sql`
+                SELECT * FROM rooms 
+                WHERE property_id = ${property_id}
+                ORDER BY created_at DESC
+            `;
+        } else {
+            // Return all rooms if no property_id specified
+            query = sql`
+                SELECT * FROM rooms 
+                ORDER BY created_at DESC
+            `;
         }
 
-        const { rows } = await sql`
-            SELECT * FROM rooms 
-            WHERE property_id = ${property_id}
-            ORDER BY created_at DESC
-        `;
+        const { rows } = await query;
 
         return NextResponse.json({
             success: true,
