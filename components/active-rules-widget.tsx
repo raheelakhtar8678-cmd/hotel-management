@@ -26,8 +26,10 @@ interface ActiveRule {
     rule_type: string;
     priority: number;
     is_active: boolean;
-    properties: { name: string };
-    action: { type: string; value: number };
+    property_name?: string;
+    properties?: { name: string };
+    adjustment_type?: string;
+    adjustment_value?: number;
 }
 
 export function ActiveRulesWidget() {
@@ -180,7 +182,7 @@ export function ActiveRulesWidget() {
                                                 </Badge>
                                             </div>
                                             <p className="text-xs text-muted-foreground">
-                                                {rule.properties?.name || 'All Properties'} • {rule.action.type === 'discount' ? '-' : '+'}{rule.action.value}%
+                                                {rule.properties?.name || 'All Properties'} • {rule.adjustment_type === 'discount' || rule.adjustment_type === 'percentage' && (rule.adjustment_value || 0) < 0 ? '-' : '+'}{Math.abs(rule.adjustment_value || 0)}%
                                             </p>
                                         </div>
                                         <DropdownMenu>
@@ -225,7 +227,7 @@ export function ActiveRulesWidget() {
                                                 </Badge>
                                             </div>
                                             <p className="text-xs text-muted-foreground">
-                                                {rule.properties?.name || 'All Properties'} • {rule.action.type === 'discount' ? '-' : '+'}{rule.action.value}%
+                                                {rule.properties?.name || 'All Properties'} • {rule.adjustment_type === 'discount' || rule.adjustment_type === 'percentage' && (rule.adjustment_value || 0) < 0 ? '-' : '+'}{Math.abs(rule.adjustment_value || 0)}%
                                             </p>
                                         </div>
                                         <DropdownMenu>
