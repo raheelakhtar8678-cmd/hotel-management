@@ -1,7 +1,39 @@
-import { adminClient } from '@/lib/supabase/admin';
+import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+
+// GET: Fetch rooms by property_id
+export async function GET(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const property_id = searchParams.get('property_id');
+
+        if (!property_id) {
+            return NextResponse.json(
+                { success: false, error: 'Property ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const { rows } = await sql`
+            SELECT * FROM rooms 
+            WHERE property_id = ${property_id}
+            ORDER BY created_at DESC
+        `;
+
+        return NextResponse.json({
+            success: true,
+            rooms: rows || []
+        });
+    } catch (error) {
+        console.error('Error fetching rooms:', error);
+        return NextResponse.json(
+            { success: false, error: 'Failed to fetch rooms' },
+            { status: 500 }
+        );
+    }
+}
 
 // POST: Create new room
 export async function POST(request: Request) {
@@ -17,25 +49,25 @@ export async function POST(request: Request) {
         }
 
         // Get property to inherit base price
-        const { data: property } = await adminClient
-            .from('properties')
-            .select('base_price')
-            .eq('id', property_id)
-            .single();
+        const { rows: propertyRows } = await sql`
+            SELECT base_price FROM properties WHERE id = ${property_id} LIMIT 1
+        `;
+        const property = propertyRows[0];
 
-        const { data: room, error } = await adminClient
-            .from('rooms')
-            .insert({
-                property_id,
-                type: type || 'Standard',
-                status: status || 'available',
-                current_price: property?.base_price || 100,
-                last_logic_reason: 'Initial setup'
-            })
-            .select()
-            .single();
+        const { rows } = await sql`
+            INSERT INTO rooms (
+                property_id, type, status, current_price, last_logic_reason
+            ) VALUES (
+                ${property_id},
+                ${type || 'Standard'},
+                ${status || 'available'},
+                ${property?.base_price || 100},
+                'Initial setup'
+            )
+            RETURNING *
+        `;
 
-        if (error) throw error;
+        const room = rows[0];
 
         return NextResponse.json({
             success: true,

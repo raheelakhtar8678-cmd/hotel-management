@@ -1,7 +1,9 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { adminClient } from "@/lib/supabase/admin";
 import {
     Building2,
     MapPin,
@@ -12,47 +14,72 @@ import {
     TrendingUp,
     ArrowLeft,
     Edit,
-    Archive
+    Archive,
+    RefreshCw
 } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-
-export const revalidate = 0;
+import { useRouter } from "next/navigation";
 
 interface PageProps {
     params: Promise<{ id: string }>;
 }
 
-export default async function PropertyDetailPage({ params }: PageProps) {
-    const { id } = await params;
+export default function PropertyDetailPage({ params }: PageProps) {
+    const router = useRouter();
+    const [property, setProperty] = useState<any>(null);
+    const [rooms, setRooms] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [propertyId, setPropertyId] = useState<string>('');
 
-    let property: any = null;
-    let rooms: any[] = [];
-    let totalRevenue = 0;
-    let avgOccupancy = 0;
+    useEffect(() => {
+        params.then(({ id }) => {
+            setPropertyId(id);
+            fetchPropertyDetails(id);
+        });
+    }, [params]);
 
-    try {
-        const { data: propertyData, error } = await adminClient
-            .from('properties')
-            .select('*, rooms(*)')
-            .eq('id', id)
-            .single();
+    const fetchPropertyDetails = async (id: string) => {
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/properties?id=${id}`);
+            const data = await response.json();
 
-        if (error) throw error;
-        if (!propertyData) return notFound();
+            if (data.success && data.property) {
+                setProperty(data.property);
+                // Fetch rooms separately
+                const roomsResponse = await fetch(`/api/rooms?property_id=${id}`);
+                const roomsData = await roomsResponse.json();
+                if (roomsData.success) {
+                    setRooms(roomsData.rooms || []);
+                }
+            } else {
+                router.push('/properties');
+            }
+        } catch (error) {
+            console.error('Error fetching property:', error);
+            router.push('/properties');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        property = propertyData;
-        rooms = property.rooms || [];
-
-        // Calculate metrics
-        const occupiedCount = rooms.filter((r: any) => r.status === 'occupied').length;
-        avgOccupancy = rooms.length > 0 ? Number(((occupiedCount / rooms.length) * 100).toFixed(0)) : 0;
-        totalRevenue = rooms.reduce((sum: number, r: any) => sum + (r.current_price || 0), 0);
-
-    } catch (err) {
-        console.warn("Failed to load property details");
-        return notFound();
+    if (loading) {
+        return (
+            <div className="flex-1 p-8 pt-6">
+                <div className="flex items-center justify-center h-64">
+                    <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            </div>
+        );
     }
+
+    if (!property) {
+        return null;
+    }
+
+    const occupiedCount = rooms.filter(r => r.status === 'occupied').length;
+    const avgOccupancy = rooms.length > 0 ? Math.round((occupiedCount / rooms.length) * 100) : 0;
+    const totalRevenue = rooms.reduce((sum, r) => sum + (r.current_price || 0), 0);
 
     return (
         <div className="flex-1 p-8 pt-6">
@@ -84,7 +111,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     )}
                 </div>
                 <div className="flex gap-2">
-                    <Link href={`/properties/${id}/edit`}>
+                    <Link href={`/properties/${propertyId}/edit`}>
                         <Button variant="outline">
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Property
@@ -200,11 +227,13 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                             <span className="text-muted-foreground">Base Nightly Rate</span>
                             <span className="font-bold text-lg text-emerald-500">${property.base_price}</span>
                         </div>
-                        <div className="bg-secondary/30 rounded-lg p-3 text-sm">
-                            <p className="text-muted-foreground mb-2">Active Pricing Rules:</p>
-                            <p className="text-xs">• Demand-based adjustments enabled</p>
-                            <p className="text-xs">• Floor/ceiling protection active</p>
-                            <p className="text-xs">• Weekend premiums configured</p>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Min Price</span>
+                            <span className="font-medium">${property.min_price}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Max Price</span>
+                            <span className="font-medium">${property.max_price}</span>
                         </div>
                         <Link href="/pricing-rules">
                             <Button variant="outline" className="w-full" size="sm">
@@ -220,7 +249,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle>Rooms ({rooms.length})</CardTitle>
-                        <Link href={`/inventory?property=${id}`}>
+                        <Link href={`/inventory?property=${propertyId}`}>
                             <Button variant="outline" size="sm">
                                 View All in Inventory
                             </Button>
@@ -232,7 +261,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                         <div className="text-center py-8 text-muted-foreground">
                             <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
                             <p>No rooms added yet</p>
-                            <Link href={`/inventory?property=${id}`}>
+                            <Link href={`/inventory?property=${propertyId}`}>
                                 <Button className="mt-4" size="sm">
                                     Add Rooms
                                 </Button>
@@ -267,7 +296,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                                 </div>
                             ))}
                             {rooms.length > 5 && (
-                                <Link href={`/inventory?property=${id}`}>
+                                <Link href={`/inventory?property=${propertyId}`}>
                                     <Button variant="ghost" className="w-full" size="sm">
                                         View all {rooms.length} rooms →
                                     </Button>

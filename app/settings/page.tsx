@@ -27,10 +27,10 @@ export default function SettingsPage() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Database className="h-5 w-5" />
-                        Database Connection (Vercel Postgres / Neon)
+                        Database Connection (Neon Postgres)
                     </CardTitle>
                     <CardDescription>
-                        Native integration with Vercel Storage. No manual setup required.
+                        Connect your Neon database via environment variables (POSTGRES_URL).
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -65,20 +65,20 @@ export default function SettingsPage() {
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-blue-600">
                                 <AlertCircle className="h-5 w-5" />
-                                Action Required: Connect Database
+                                Action Required: Add POSTGRES_URL Environment Variable
                             </div>
                             <p className="text-sm text-foreground/80">
-                                To use this app on Vercel, you need to connect a database.
+                                Add your Neon pooled connection string as POSTGRES_URL in environment variables.
                             </p>
                             <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-md text-sm font-mono border">
-                                1. Go to Vercel Dashboard<br />
-                                2. Click "Storage" tab <br />
-                                3. Create "Neon" (Postgres)<br />
-                                4. Click "Connect" to this project
+                                1. Go to console.neon.tech<br />
+                                2. Get your "Pooled connection" string<br />
+                                3. Add POSTGRES_URL to Vercel environment variables<br />
+                                4. Redeploy your application
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="outline" onClick={() => window.open('https://vercel.com/dashboard', '_blank')}>
-                                    Open Vercel Dashboard
+                                <Button variant="outline" onClick={() => window.open('https://console.neon.tech', '_blank')}>
+                                    Open Neon Console
                                     <LayoutDashboard className="ml-2 h-4 w-4" />
                                 </Button>
                                 <Button variant="ghost" onClick={() => window.location.reload()}>
@@ -172,37 +172,58 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
-            {/* API Keys */}
+            {/* Environment Variables */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Key className="h-5 w-5" />
-                        AI API Keys (Optional)
+                        Environment Variables
                     </CardTitle>
-                    <CardDescription>Configure AI providers for automated insights generation</CardDescription>
+                    <CardDescription>Configure API keys and settings via environment variables (not stored in database)</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Google Gemini API Key</label>
-                        <input
-                            type="password"
-                            placeholder="AIza..."
-                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm font-mono transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            For AI insights. Get your key at <a href="https://makersuite.google.com/app/apikey" target="_blank" className="text-primary underline">Google AI Studio</a>
-                        </p>
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <h4 className="font-semibold text-sm mb-2">Required Variables:</h4>
+                        <div className="space-y-2 text-sm font-mono">
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">POSTGRES_URL</span>
+                                <span className="text-xs text-green-600">✓ Required</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground font-sans">Your Neon pooled connection string</p>
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">OpenAI API Key</label>
-                        <input
-                            type="password"
-                            placeholder="sk-..."
-                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm font-mono transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            Alternative AI provider. Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" className="text-primary underline">OpenAI Platform</a>
-                        </p>
+
+                    <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                        <h4 className="font-semibold text-sm mb-2">Optional - For AI Features:</h4>
+                        <div className="space-y-3 text-sm font-mono">
+                            <div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-muted-foreground">GEMINI_API_KEY</span>
+                                    <span className="text-xs text-orange-600">Optional</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground font-sans mt-1">
+                                    Get from <a href="https://makersuite.google.com/app/apikey" target="_blank" className="text-primary underline">Google AI Studio</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-100 dark:bg-slate-900 border rounded-lg p-4">
+                        <h4 className="font-semibold text-sm mb-2">How to Add:</h4>
+                        <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                            <li>Go to Vercel Project Settings → Environment Variables</li>
+                            <li>Add the variable name and value</li>
+                            <li>Select all environments (Production, Preview, Development)</li>
+                            <li>Redeploy your application</li>
+                        </ol>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-3"
+                            onClick={() => window.open('https://vercel.com/docs/projects/environment-variables', '_blank')}
+                        >
+                            View Vercel Docs
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
