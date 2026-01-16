@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -76,15 +76,18 @@ export function GlobalSearch() {
         }
     };
 
-    // Keyboard shortcut
-    if (typeof window !== 'undefined') {
-        document.addEventListener('keydown', (e) => {
+    // Keyboard shortcut - properly inside useEffect with cleanup
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                 e.preventDefault();
                 setOpen(true);
             }
-        });
-    }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     return (
         <>
