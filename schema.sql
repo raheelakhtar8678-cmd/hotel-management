@@ -22,6 +22,20 @@ create table if not exists rooms (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Room Extras Table (add-ons like breakfast, parking, etc.)
+create table if not exists room_extras (
+  id uuid primary key default uuid_generate_v4(),
+  room_id uuid references rooms(id) on delete cascade not null,
+  booking_id uuid references bookings(id) on delete cascade,
+  item_name text not null,
+  item_category text check (item_category in ('food', 'beverage', 'service', 'amenity', 'other')) default 'other',
+  price numeric not null,
+  quantity int default 1,
+  description text,
+  status text check (status in ('pending', 'paid', 'cancelled')) default 'pending',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Bookings Table
 create table if not exists bookings (
   id uuid primary key default uuid_generate_v4(),
@@ -54,6 +68,7 @@ create table if not exists system_settings (
 -- RLS Policies
 alter table properties enable row level security;
 alter table rooms enable row level security;
+alter table room_extras enable row level security;
 alter table bookings enable row level security;
 alter table price_history enable row level security;
 alter table system_settings enable row level security;
@@ -61,6 +76,7 @@ alter table system_settings enable row level security;
 -- Allow public read access (for simplicity in this demo app)
 create policy "Public read properties" on properties for select using (true);
 create policy "Public read rooms" on rooms for select using (true);
+create policy "Public read room_extras" on room_extras for select using (true);
 create policy "Public read bookings" on bookings for select using (true);
 create policy "Public read price_history" on price_history for select using (true);
 create policy "Public read system_settings" on system_settings for select using (true);

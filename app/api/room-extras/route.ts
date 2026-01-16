@@ -42,7 +42,15 @@ export async function GET(request: Request) {
             success: true,
             extras: rows || []
         });
-    } catch (error) {
+    } catch (error: any) {
+        // Handle case where room_extras table doesn't exist yet
+        if (error?.code === '42P01') {
+            console.log('room_extras table does not exist yet, returning empty array');
+            return NextResponse.json({
+                success: true,
+                extras: []
+            });
+        }
         console.error('Error fetching room extras:', error);
         return NextResponse.json(
             { success: false, error: 'Failed to fetch room extras' },
