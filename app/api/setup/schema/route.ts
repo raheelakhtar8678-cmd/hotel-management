@@ -139,20 +139,36 @@ ON CONFLICT (key) DO NOTHING;
 `;
 
 import { db } from '@vercel/postgres';
+import { Pool } from 'pg';
 
 export async function POST(request: Request) {
   let client;
-  try {
-    client = await db.connect();
+  let pool;
 
-    // Execute the entire schema
-    // Note: multiple statements support depends on the driver configuration.
-    // Vercel Neon usually supports it.
-    await client.query(SCHEMA_SQL);
+  try {
+    // Read body to see if manual connection string is provided
+    let body = {};
+    try { body = await request.json(); } catch (e) { }
+    const { connectionString } = body as any;
+
+    if (connectionString) {
+      console.log("Using manual connection string (pg driver)...");
+      pool = new Pool({
+        connectionString,
+        ssl: { rejectUnauthorized: false }
+      });
+      client = await pool.connect();
+      await client.query(SCHEMA_SQL);
+    } else {
+      // Default: Vercel Postgres
+      console.log("Using Vercel Postgres (db.connect)...");
+      client = await db.connect();
+      await client.query(SCHEMA_SQL);
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Database initialized successfully! All tables created (Vercel Postgres).'
+      message: 'Database initialized successfully! All tables created.'
     });
 
   } catch (error: any) {
@@ -162,8 +178,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   } finally {
-    // @ts-ignore - release might not exist on some client types but does on pool clients
     if (client && typeof client.release === 'function') client.release();
+    if (pool) await pool.end();
   }
 }
 

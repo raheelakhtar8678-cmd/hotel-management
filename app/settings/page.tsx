@@ -85,6 +85,50 @@ export default function SettingsPage() {
                                     <RefreshCw className="mr-2 h-4 w-4" /> Check Connection Again
                                 </Button>
                             </div>
+
+                            <div className="pt-4 mt-4 border-t">
+                                <details className="text-sm">
+                                    <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                                        Trouble connecting? Enter manual string
+                                    </summary>
+                                    <div className="mt-3 space-y-3">
+                                        <p className="text-xs text-muted-foreground">
+                                            If the Vercel Integration isn't working, paste the connection string from your database provider (Neon/Supabase) here.
+                                        </p>
+                                        <input
+                                            id="manualString"
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                            placeholder="postgres://..."
+                                        />
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="w-full"
+                                            onClick={async () => {
+                                                const str = (document.getElementById('manualString') as HTMLInputElement).value;
+                                                if (!str) return alert("Please enter a string");
+
+                                                setLoading(true);
+                                                try {
+                                                    const res = await fetch('/api/setup/schema', {
+                                                        method: 'POST',
+                                                        body: JSON.stringify({ connectionString: str })
+                                                    });
+                                                    const data = await res.json();
+                                                    if (data.success) {
+                                                        alert("Success! 🎉\n\nIMPORTANT: Now go to Vercel Settings -> Environment Variables and add this string as 'POSTGRES_URL' so the rest of the app works.");
+                                                    } else {
+                                                        alert("Error: " + data.error);
+                                                    }
+                                                } catch (e: any) { alert(e.message); }
+                                                setLoading(false);
+                                            }}
+                                        >
+                                            Initialize w/ Manual String
+                                        </Button>
+                                    </div>
+                                </details>
+                            </div>
                         </div>
                     )}
                 </CardContent>
