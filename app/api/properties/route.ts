@@ -68,15 +68,24 @@ export async function POST(request: Request) {
         // Get demo user ID (in production, use auth)
         const userId = '00000000-0000-0000-0000-000000000001';
 
+        // Calculate min and max prices automatically
+        // min_price = 50% of base_price, max_price = 200% of base_price
+        const min_price = Math.floor(base_price * 0.5);
+        const max_price = Math.floor(base_price * 2);
+
         // Use Vercel Postgres SQL
         const result = await sql`
             INSERT INTO properties (
                 user_id, name, property_type, city, country, address, 
-                bedrooms, bathrooms, max_guests, base_price, timezone, is_active
+                bedrooms, bathrooms, max_guests, 
+                base_price, min_price, max_price, 
+                timezone, is_active
             ) VALUES (
                 ${userId}, ${name}, ${property_type || 'apartment'}, ${city}, 
                 ${country || 'USA'}, ${address}, ${bedrooms || 1}, ${bathrooms || 1}, 
-                ${max_guests || 2}, ${base_price}, ${timezone || 'UTC'}, true
+                ${max_guests || 2}, 
+                ${base_price}, ${min_price}, ${max_price},
+                ${timezone || 'UTC'}, true
             )
             RETURNING *;
         `;
