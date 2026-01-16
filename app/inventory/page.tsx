@@ -120,9 +120,9 @@ export default function InventoryPage() {
     };
 
     const calculateRoomTotal = (room: any) => {
-        const basePrice = room.current_price || 0;
-        const roomExtras = getRoomExtras(room.id);
-        const extrasTotal = roomExtras.reduce((sum, e) => sum + (e.price * e.quantity), 0);
+        const basePrice = Number(room?.current_price) || 0;
+        const roomExtras = room?.id ? getRoomExtras(room.id) : [];
+        const extrasTotal = roomExtras.reduce((sum, e) => sum + (Number(e.price) * Number(e.quantity)), 0);
         return basePrice + extrasTotal;
     };
 
@@ -180,12 +180,12 @@ export default function InventoryPage() {
 
                             return (
                                 <TableRow key={room.id}>
-                                    <TableCell className="font-medium">{room.id.slice(0, 8)}...</TableCell>
+                                    <TableCell className="font-medium">{room.id ? `${room.id.slice(0, 8)}...` : 'N/A'}</TableCell>
                                     <TableCell>{property?.name}</TableCell>
-                                    <TableCell>{room.type}</TableCell>
+                                    <TableCell>{room.type || 'Unknown'}</TableCell>
                                     <TableCell>
                                         <Badge variant={room.status === 'available' ? 'default' : 'secondary'}>
-                                            {room.status}
+                                            {room.status || 'unknown'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>${room.current_price ?? property?.base_price}</TableCell>
