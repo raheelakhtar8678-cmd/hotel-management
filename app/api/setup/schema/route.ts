@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { sql } from '@vercel/postgres';
 
 export const dynamic = 'force-dynamic';
 
@@ -136,82 +136,23 @@ VALUES
   ('ai_insights_enabled', 'true', 'Enable AI-powered revenue insights'),
   ('competitor_tracking_enabled', 'true', 'Enable competitor price tracking')
 ON CONFLICT (key) DO NOTHING;
-
--- RLS Policies (Idempotent checks)
-DO $$ 
-BEGIN
-    -- Enable RLS
-    ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE ai_insights ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE competitors ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE competitor_logs ENABLE ROW LEVEL SECURITY;
-    ALTER TABLE calendar_connections ENABLE ROW LEVEL SECURITY;
-EXCEPTION
-    WHEN others THEN NULL; -- Ignore if already enabled
-END $$;
-
--- Create policies (Dropping first to avoid conflict)
-DROP POLICY IF EXISTS "Public read properties" ON properties;
-CREATE POLICY "Public read properties" ON properties FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Public read rooms" ON rooms;
-CREATE POLICY "Public read rooms" ON rooms FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Public read bookings" ON bookings;
-CREATE POLICY "Public read bookings" ON bookings FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Public read price_history" ON price_history;
-CREATE POLICY "Public read price_history" ON price_history FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Public read system_settings" ON system_settings;
-CREATE POLICY "Public read system_settings" ON system_settings FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Public read ai_insights" ON ai_insights;
-CREATE POLICY "Public read ai_insights" ON ai_insights FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Public read competitors" ON competitors;
-CREATE POLICY "Public read competitors" ON competitors FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Public read competitor_logs" ON competitor_logs;
-CREATE POLICY "Public read competitor_logs" ON competitor_logs FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Public read calendar_connections" ON calendar_connections;
-CREATE POLICY "Public read calendar_connections" ON calendar_connections FOR SELECT USING (true);
 `;
+
+import { db } from '@vercel/postgres';
 
 export async function POST(request: Request) {
   let client;
   try {
-    const { connectionString } = await request.json();
+    client = await db.connect();
 
-    // Use provided string or env var
-    const dbUrl = connectionString || process.env.DATABASE_URL;
-
-    if (!dbUrl) {
-      return NextResponse.json(
-        { success: false, error: 'DATABASE_URL is missing. Please set it in Settings.' },
-        { status: 400 }
-      );
-    }
-
-    // Connect to Postgres
-    const pool = new Pool({
-      connectionString: dbUrl,
-      ssl: { rejectUnauthorized: false } // Required for Supabase transaction pooler
-    });
-
-    client = await pool.connect();
-
-    // Run Schema
+    // Execute the entire schema
+    // Note: multiple statements support depends on the driver configuration.
+    // Vercel Neon usually supports it.
     await client.query(SCHEMA_SQL);
 
     return NextResponse.json({
       success: true,
-      message: 'Database initialized successfully! All tables created.'
+      message: 'Database initialized successfully! All tables created (Vercel Postgres).'
     });
 
   } catch (error: any) {
@@ -221,7 +162,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   } finally {
-    if (client) client.release();
+    // @ts-ignore - release might not exist on some client types but does on pool clients
+    if (client && typeof client.release === 'function') client.release();
   }
 }
 
