@@ -1,42 +1,38 @@
-import { adminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { sql } from '@vercel/postgres';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
     try {
-        // Fetch Gemini API key from settings
-        const { data: settings } = await adminClient
-            .from('system_settings')
-            .select('*');
-
-        const geminiKey = settings?.find(s => s.key === 'gemini_api_key')?.value;
+        // Get Gemini API key from environment variable
+        const geminiKey = process.env.GEMINI_API_KEY;
 
         if (!geminiKey) {
             return NextResponse.json({
-                error: 'Gemini API key not configured. Please add it in Settings.'
+                error: 'Gemini API key not configured. Please add GEMINI_API_KEY to environment variables.'
             }, { status: 400 });
         }
 
-        // Fetch recent bookings data
-        const { data: bookings } = await adminClient
-            .from('bookings')
-            .select('*, rooms(type, current_price)')
-            .eq('status', 'confirmed')
-            .order('created_at', { ascending: false })
-            .limit(50);
+        // Fetch recent bookings and rooms data
+        const { rows: bookings } = await sql`
+            SELECT b.*, r.type, r.current_price 
+            FROM bookings b
+            LEFT JOIN rooms r ON b.room_id = r.id
+            WHERE b.status = 'confirmed'
+            ORDER BY b.created_at DESC
+            LIMIT 50
+        `;
 
-        const { data: rooms } = await adminClient
-            .from('rooms')
-            .select('*');
+        const { rows: rooms } = await sql`SELECT * FROM rooms`;
 
         // Calculate occupancy and trends
         const today = new Date().toISOString().split('T')[0];
-        const occupiedCount = bookings?.filter(
-            b => b.check_in <= today && b.check_out > today
-        ).length || 0;
-        const occupancyRate = rooms?.length
+        const occupiedCount = bookings.filter(
+            (b: any) => b.check_in <= today && b.check_out > today
+        ).length;
+        const occupancyRate = rooms.length
             ? ((occupiedCount / rooms.length) * 100).toFixed(0)
             : 0;
 
@@ -48,8 +44,8 @@ export async function POST() {
 
 Current Hotel Status:
 - Occupancy Rate: ${occupancyRate}%
-- Total Rooms: ${rooms?.length || 0}
-- Recent Bookings: ${bookings?.length || 0}
+- Total Rooms: ${rooms.length || 0}
+- Recent Bookings: ${bookings.length || 0}
 
 For each insight, provide:
 1. Type (event_alert, demand_surge, or competitor_update)
@@ -121,35 +117,33 @@ Requirements:
         }
 
         // Delete old pending insights
-        await adminClient
-            .from('ai_insights')
-            .delete()
-            .eq('status', 'pending');
+        await sql`DELETE FROM ai_insights WHERE status = 'pending'`;
 
         // Save insights to database
-        const insightsToSave = insights.slice(0, 3).map((insight: any) => ({
-            type: insight.type,
-            title: insight.title,
-            description: insight.description,
-            suggested_action: insight.suggestedAction,
-            suggested_price_change: insight.priceChange,
-            estimated_revenue_impact: insight.estimatedRevenue,
-            status: 'pending'
-        }));
+        const insightsToSave = insights.slice(0, 3);
 
-        const { data: savedInsights, error } = await adminClient
-            .from('ai_insights')
-            .insert(insightsToSave)
-            .select();
-
-        if (error) {
-            console.error('Error saving insights:', error);
+        for (const insight of insightsToSave) {
+            await sql`
+                INSERT INTO ai_insights (
+                    type, title, description, suggested_action,
+                    suggested_price_change, estimated_revenue_impact, status
+                ) VALUES (
+                    ${insight.type}, ${insight.title}, ${insight.description},
+                    ${insight.suggestedAction}, ${insight.priceChange},
+                    ${insight.estimatedRevenue}, 'pending'
+                )
+            `;
         }
+
+        // Fetch saved insights
+        const { rows: savedInsights } = await sql`
+            SELECT * FROM ai_insights WHERE status = 'pending' ORDER BY created_at DESC
+        `;
 
         return NextResponse.json({
             success: true,
-            insights: savedInsights || insightsToSave,
-            message: `Generated ${insightsToSave.length} new insights`
+            insights: savedInsights,
+            message: `Generated ${savedInsights.length} new insights`
         });
 
     } catch (error: any) {

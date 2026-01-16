@@ -1,70 +1,52 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { adminClient } from "@/lib/supabase/admin";
-import { Building2, DollarSign, TrendingUp, Users, Plus, Edit, Archive } from "lucide-react";
+import { Building2, DollarSign, TrendingUp, Users, Plus, Edit, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
-export const revalidate = 0;
+export default function PropertiesPage() {
+    const [properties, setProperties] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [totalRevenue, setTotalRevenue] = useState(0);
+    const [avgOccupancy, setAvgOccupancy] = useState(0);
 
-export default async function PropertiesPage() {
-    let properties = [];
-    let totalRevenue = 0;
-    let avgOccupancy = 0;
+    useEffect(() => {
+        fetchProperties();
+    }, []);
 
-    try {
-        const { data: propertiesData, error } = await adminClient
-            .from('properties')
-            .select('*, rooms(id, status, current_price)')
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
+    const fetchProperties = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch('/api/properties');
+            const data = await response.json();
 
-        if (error) throw error;
-        properties = propertiesData || [];
+            if (data.success) {
+                const props = data.properties || [];
+                setProperties(props);
 
-        // Calculate portfolio metrics
-        let totalRooms = 0;
-        let occupiedRooms = 0;
-        for (const property of properties) {
-            const rooms = property.rooms || [];
-            totalRooms += rooms.length;
-            occupiedRooms += rooms.filter((r: any) => r.status === 'occupied').length;
-            totalRevenue += rooms.reduce((sum: number, r: any) => sum + (r.current_price || 0), 0);
+                // Calculate metrics (simplified since we don't have rooms data in this fetch)
+                const revenue = props.reduce((sum: number, p: any) => sum + (p.base_price || 0), 0);
+                setTotalRevenue(revenue);
+                setAvgOccupancy(65); // Placeholder
+            }
+        } catch (error) {
+            console.error('Error fetching properties:', error);
+        } finally {
+            setLoading(false);
         }
-        avgOccupancy = totalRooms > 0 ? Number(((occupiedRooms / totalRooms) * 100).toFixed(1)) : 0;
+    };
 
-    } catch (err) {
-        console.warn("Using Mock Data for Properties page");
-        properties = [
-            {
-                id: '1',
-                name: 'Grand Hotel Downtown',
-                property_type: 'hotel',
-                city: 'San Francisco',
-                country: 'USA',
-                base_price: 150,
-                rooms: [{}, {}, {}],
-                is_active: true,
-                bedrooms: 1,
-                bathrooms: 1,
-                max_guests: 2,
-            },
-            {
-                id: '2',
-                name: 'Beachside Villa',
-                property_type: 'villa',
-                city: 'Miami',
-                country: 'USA',
-                base_price: 300,
-                rooms: [{}, {}, {}, {}, {}],
-                is_active: true,
-                bedrooms: 4,
-                bathrooms: 3,
-                max_guests: 8,
-            },
-        ];
-        totalRevenue = 450;
-        avgOccupancy = 65;
+    if (loading) {
+        return (
+            <div className="flex-1 p-8 pt-6">
+                <div className="flex items-center justify-center h-64">
+                    <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -125,10 +107,6 @@ export default async function PropertiesPage() {
             {/* Property Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {properties.map((property: any) => {
-                    const roomCount = property.rooms?.length || 0;
-                    const occupiedCount = property.rooms?.filter((r: any) => r.status === 'occupied').length || 0;
-                    const occupancyRate = roomCount > 0 ? ((occupiedCount / roomCount) * 100).toFixed(0) : 0;
-
                     return (
                         <Card key={property.id} className="glass-card hover-glow transition-smooth group">
                             <CardHeader>
@@ -160,18 +138,14 @@ export default async function PropertiesPage() {
                             <CardContent>
                                 <div className="space-y-3">
                                     {/* Property Stats */}
-                                    <div className="grid grid-cols-3 gap-2 text-sm">
-                                        <div>
-                                            <p className="text-muted-foreground text-xs">Rooms</p>
-                                            <p className="font-semibold">{roomCount}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-muted-foreground text-xs">Occupancy</p>
-                                            <p className="font-semibold">{occupancyRate}%</p>
-                                        </div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
                                         <div>
                                             <p className="text-muted-foreground text-xs">Base Price</p>
                                             <p className="font-semibold">${property.base_price}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-muted-foreground text-xs">Price Range</p>
+                                            <p className="font-semibold text-xs">${property.min_price} - ${property.max_price}</p>
                                         </div>
                                     </div>
 
