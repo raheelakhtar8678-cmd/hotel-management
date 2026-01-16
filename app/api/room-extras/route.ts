@@ -18,20 +18,20 @@ export async function GET(request: Request) {
         } else if (booking_id) {
             query = sql`SELECT * FROM room_extras WHERE booking_id = ${booking_id} ORDER BY created_at DESC`;
         } else if (property_id) {
-            // Get extras for all rooms in a property
+            // Get extras for all rooms in a property - LEFT JOIN to handle no rooms case
             query = sql`
                 SELECT re.*, r.type as room_type, r.property_id
                 FROM room_extras re
-                JOIN rooms r ON re.room_id = r.id
+                LEFT JOIN rooms r ON re.room_id = r.id
                 WHERE r.property_id = ${property_id}
                 ORDER BY re.created_at DESC
             `;
         } else {
-            // Get all extras
+            // Get all extras - use LEFT JOIN to handle empty rooms table
             query = sql`
                 SELECT re.*, r.type as room_type, r.property_id
                 FROM room_extras re
-                JOIN rooms r ON re.room_id = r.id
+                LEFT JOIN rooms r ON re.room_id = r.id
                 ORDER BY re.created_at DESC
             `;
         }
