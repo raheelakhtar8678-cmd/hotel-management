@@ -28,7 +28,7 @@ export default function PropertiesPage() {
                 setProperties(props);
 
                 // Calculate metrics (simplified since we don't have rooms data in this fetch)
-                const revenue = props.reduce((sum: number, p: any) => sum + (p.base_price || 0), 0);
+                const revenue = props.reduce((sum: number, p: any) => sum + Number(p.base_price || 0), 0);
                 setTotalRevenue(revenue);
                 setAvgOccupancy(65); // Placeholder
             }

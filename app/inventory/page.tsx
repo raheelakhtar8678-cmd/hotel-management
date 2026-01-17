@@ -21,13 +21,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Package, X, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Package, X, RefreshCw, Settings, Calendar, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 
 export default function InventoryPage() {
     const [properties, setProperties] = useState<any[]>([]);
     const [rooms, setRooms] = useState<any[]>([]);
     const [extras, setExtras] = useState<any[]>([]);
+    const [pricingRules, setPricingRules] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedRoom, setSelectedRoom] = useState<any>(null);
     const [showExtrasDialog, setShowExtrasDialog] = useState(false);
@@ -35,8 +38,12 @@ export default function InventoryPage() {
         item_name: '',
         price: '',
         quantity: 1,
+        quantity: 1,
         item_category: 'other'
     });
+    const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [icalUrl, setIcalUrl] = useState('');
 
     useEffect(() => {
         fetchData();
@@ -62,6 +69,13 @@ export default function InventoryPage() {
             if (extrasRes.ok) {
                 const extrasData = await extrasRes.json();
                 setExtras(extrasData.extras || []);
+            }
+
+            // Fetch active pricing rules
+            const rulesRes = await fetch('/api/pricing-rules?is_active=true');
+            if (rulesRes.ok) {
+                const rulesData = await rulesRes.json();
+                setPricingRules(rulesData.rules || []);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -115,15 +129,103 @@ export default function InventoryPage() {
         }
     };
 
+    const handleUpdateRoom = async () => {
+        if (!selectedRoom) return;
+        setLoading(true); // Re-use loading or create saving state
+        try {
+            const res = await fetch(`/api/rooms/${selectedRoom.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ical_url: icalUrl })
+            });
+            if (res.ok) {
+                alert('Settings saved!');
+                setShowSettingsDialog(false);
+                fetchData(); // Refresh to get new data if needed
+            } else {
+                alert('Failed to save settings');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error saving settings');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSync = async () => {
+        if (!selectedRoom) return;
+        setSyncing(true);
+        try {
+            const res = await fetch(`/api/rooms/${selectedRoom.id}/sync`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert(`Sync complete! Added ${data.added} bookings.`);
+            } else {
+                alert(`Sync failed: ${data.error || 'Unknown error'}`);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error running sync');
+        } finally {
+            setSyncing(false);
+        }
+    };
+
     const getRoomExtras = (roomId: string) => {
         return extras.filter(e => e.room_id === roomId);
     };
 
+    const calculateEffectivePrice = (room: any) => {
+        const basePrice = Number(room?.current_price || 0);
+        if (!room) return { price: basePrice, reasons: [] };
+
+        let adjustedPrice = basePrice;
+        let reasons: string[] = [];
+        const today = new Date();
+
+        // Find rules for this property
+        const activeRules = pricingRules.filter(r => r.property_id === room.property_id);
+
+        activeRules.forEach(rule => {
+            let applies = false;
+            // Simplified logic for "Today's Rate"
+            if (rule.rule_type === 'seasonal') {
+                const start = new Date(rule.date_from);
+                const end = new Date(rule.date_to);
+                if (today >= start && today <= end) applies = true;
+            } else if (rule.rule_type === 'weekend') {
+                const day = today.getDay();
+                // Friday (5) and Saturday (6) are weekend nights usually
+                if (day === 5 || day === 6) applies = true;
+            } else if (rule.rule_type === 'last_minute') {
+                // Assuming "Today" counts as 0 days before checkin
+                if (rule.conditions.days_before_checkin >= 0) applies = true;
+            }
+
+            if (applies) {
+                const action = rule.action;
+                const val = Number(action.value);
+                if (action.type === 'surge') {
+                    const amount = action.unit === 'percent' ? basePrice * (val / 100) : val;
+                    adjustedPrice += amount;
+                    reasons.push(`+${action.unit === 'percent' ? val + '%' : '$' + val} ${rule.name}`);
+                } else if (action.type === 'discount') {
+                    const amount = action.unit === 'percent' ? basePrice * (val / 100) : val;
+                    adjustedPrice -= amount;
+                    reasons.push(`-${action.unit === 'percent' ? val + '%' : '$' + val} ${rule.name}`);
+                }
+            }
+        });
+
+        return { price: adjustedPrice, reasons };
+    };
+
     const calculateRoomTotal = (room: any) => {
-        const basePrice = Number(room?.current_price) || 0;
+        const { price: effectivePrice } = calculateEffectivePrice(room);
         const roomExtras = room?.id ? getRoomExtras(room.id) : [];
         const extrasTotal = roomExtras.reduce((sum, e) => sum + (Number(e.price) * Number(e.quantity)), 0);
-        return basePrice + extrasTotal;
+        return effectivePrice + extrasTotal;
     };
 
     const propertyMap = new Map(properties.map(p => [p.id, p]));
@@ -166,8 +268,9 @@ export default function InventoryPage() {
                             <TableHead>Type</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Base Price</TableHead>
+                            <TableHead>Today's Rate</TableHead>
                             <TableHead>Extras</TableHead>
-                            <TableHead>Total</TableHead>
+                            <TableHead>Total Est.</TableHead>
                             <TableHead>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -176,7 +279,8 @@ export default function InventoryPage() {
                             const property = propertyMap.get(room.property_id);
                             const roomExtras = getRoomExtras(room.id);
                             const extrasTotal = roomExtras.reduce((sum, e) => sum + (e.price * e.quantity), 0);
-                            const total = calculateRoomTotal(room);
+                            const effective = calculateEffectivePrice(room);
+                            const total = effective.price + extrasTotal;
 
                             return (
                                 <TableRow key={room.id}>
@@ -188,7 +292,19 @@ export default function InventoryPage() {
                                             {room.status || 'unknown'}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>${room.current_price ?? property?.base_price}</TableCell>
+                                    <TableCell>${Number(room.current_price ?? property?.base_price).toFixed(2)}</TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className={`font-semibold ${room.current_price !== effective.price ? 'text-primary' : ''}`}>
+                                                ${effective.price.toFixed(2)}
+                                            </span>
+                                            {effective.reasons.length > 0 && (
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    {effective.reasons.join(', ')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </TableCell>
                                     <TableCell>
                                         {roomExtras.length > 0 ? (
                                             <div className="text-sm">
@@ -213,8 +329,19 @@ export default function InventoryPage() {
                                                 setShowExtrasDialog(true);
                                             }}
                                         >
-                                            <Package className="h-4 w-4 mr-1" />
                                             Extras
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 ml-1"
+                                            onClick={() => {
+                                                setSelectedRoom(room);
+                                                setIcalUrl(room.ical_url || '');
+                                                setShowSettingsDialog(true);
+                                            }}
+                                        >
+                                            <Settings className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -325,6 +452,45 @@ export default function InventoryPage() {
                                     No extras added yet
                                 </p>
                             )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Room Settings Dialog */}
+            <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Room Settings - {selectedRoom?.name}</DialogTitle>
+                        <DialogDescription>Configure external synchronization</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="ical">iCal Calendar URL</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    id="ical"
+                                    placeholder="https://airbnb.com/calendar/..."
+                                    value={icalUrl}
+                                    onChange={(e) => setIcalUrl(e.target.value)}
+                                />
+                                <Button variant="outline" size="icon" onClick={() => window.open(icalUrl, '_blank')} disabled={!icalUrl}>
+                                    <LinkIcon className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Paste the export link from Airbnb, Booking.com, or VRBO.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-4 border-t">
+                            <Button variant="outline" onClick={handleSync} disabled={syncing || !selectedRoom?.ical_url}>
+                                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                                {syncing ? 'Syncing...' : 'Sync Now'}
+                            </Button>
+                            <Button onClick={handleUpdateRoom}>
+                                Save Settings
+                            </Button>
                         </div>
                     </div>
                 </DialogContent>
