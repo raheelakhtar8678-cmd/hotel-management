@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Check, Database, RefreshCw, LayoutDashboard, Key } from "lucide-react";
+import { AlertCircle, Check, Database, RefreshCw, LayoutDashboard, Key, FileCode, Copy } from "lucide-react";
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(false);
@@ -224,6 +224,112 @@ export default function SettingsPage() {
                         >
                             View Vercel Docs
                         </Button>
+                    </div>
+                </CardContent>
+            </Card>
+            {/* Database Setup Scripts - Added for User Convenience */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <FileCode className="h-5 w-5" />
+                        Database Setup Scripts
+                    </CardTitle>
+                    <CardDescription>
+                        Run these SQL commands in your Neon SQL Editor to fix missing tables or columns.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                        {[
+                            {
+                                title: "1. Create Missing Tables (Room Extras & Neon Demo)",
+                                sql: `CREATE TABLE IF NOT EXISTS room_extras (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  room_id UUID REFERENCES rooms(id) ON DELETE CASCADE NOT NULL,
+  booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
+  item_name TEXT NOT NULL,
+  item_category TEXT CHECK (item_category IN ('food', 'beverage', 'service', 'amenity', 'other')) DEFAULT 'other',
+  price NUMERIC NOT NULL,
+  quantity INT DEFAULT 1,
+  description TEXT,
+  status TEXT CHECK (status IN ('pending', 'paid', 'cancelled')) DEFAULT 'pending',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE room_extras ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read room_extras" ON room_extras FOR SELECT USING (true);
+CREATE TABLE IF NOT EXISTS playing_with_neon(id SERIAL PRIMARY KEY, name TEXT NOT NULL, value REAL);
+INSERT INTO playing_with_neon(name, value)
+  SELECT LEFT(md5(i::TEXT), 10), random() FROM generate_series(1, 10) s(i);
+SELECT * FROM playing_with_neon;`
+                            },
+                            {
+                                title: "2. Create Pricing Rules Table",
+                                sql: `CREATE TABLE IF NOT EXISTS pricing_rules (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  property_id UUID REFERENCES properties(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  rule_type TEXT CHECK (rule_type IN (
+    'last_minute', 'length_of_stay', 'weekend', 'seasonal', 
+    'gap_night', 'orphan_day', 'event_based', 'custom'
+  )) NOT NULL,
+  priority INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  conditions JSONB NOT NULL,
+  action JSONB NOT NULL,
+  date_from DATE,
+  date_to DATE,
+  days_of_week INT[],
+  min_nights INT,
+  max_nights INT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);`
+                            },
+                            {
+                                title: "3. Update Bookings (Guest Info)",
+                                sql: `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS guest_name TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS guest_email TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS guests INT DEFAULT 1;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS channel TEXT CHECK (channel IN ('booking_com', 'expedia', 'airbnb', 'direct', 'other')) DEFAULT 'direct';`
+                            },
+                            {
+                                title: "4. Add Refund Support",
+                                sql: `ALTER TABLE bookings 
+ADD COLUMN IF NOT EXISTS refund_amount NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS refund_reason TEXT,
+ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP WITH TIME ZONE;`
+                            },
+                            {
+                                title: "5. Fix Status Constraint (Important for Refunds)",
+                                sql: `ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_status_check;
+
+ALTER TABLE bookings 
+ADD CONSTRAINT bookings_status_check 
+CHECK (status IN ('confirmed', 'cancelled', 'refunded'));`
+                            }
+                        ].map((item, index) => (
+                            <div key={index} className="border rounded-lg overflow-hidden">
+                                <div className="bg-muted px-4 py-2 flex items-center justify-between border-b">
+                                    <span className="font-medium text-sm">{item.title}</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 text-muted-foreground hover:text-foreground"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(item.sql);
+                                            alert("Copied SQL to clipboard!");
+                                        }}
+                                    >
+                                        <Copy className="h-4 w-4 mr-2" />
+                                        Copy
+                                    </Button>
+                                </div>
+                                <pre className="bg-slate-950 text-slate-50 p-4 text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+                                    {item.sql}
+                                </pre>
+                            </div>
+                        ))}
                     </div>
                 </CardContent>
             </Card>
