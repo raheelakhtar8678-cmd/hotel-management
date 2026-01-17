@@ -1,4 +1,4 @@
-import ical from 'node-ical';
+import { parseICS } from './ical-parser';
 import { sql } from '@vercel/postgres';
 
 interface SyncResult {
@@ -17,72 +17,63 @@ export async function syncRoomIcal(roomId: string, icalUrl: string): Promise<Syn
         if (!response.ok) throw new Error(`Failed to fetch iCal: ${response.statusText}`);
 
         const body = await response.text();
-        const events = await ical.parseICS(body);
+        const events = parseICS(body);
 
-        for (const k in events) {
-            const event = events[k];
-            if (event.type === 'VEVENT') {
-                try {
-                    const uid = event.uid;
-                    const start = event.start; // Date object
-                    const end = event.end;     // Date object
-                    const summary = event.summary || 'External Booking';
-                    const description = event.description || '';
+        for (const event of events) {
+            try {
+                const uid = event.uid;
+                const start = event.start;
+                const end = event.end;
+                const summary = event.summary || 'External Booking';
 
-                    // Validate dates
-                    if (!start || !end) continue;
-                    if (end <= start) continue; // Invalid duration
-                    if (end < new Date()) continue; // Past booking (optional: maybe we want history?)
+                // Validate dates
+                if (!start || !end) continue;
+                if (end <= start) continue; // Invalid duration
+                if (end < new Date()) continue; // Past booking (optional: maybe we want history?)
 
-                    // Check if exists
-                    const { rows: existing } = await sql`
-                        SELECT id FROM bookings WHERE external_id = ${uid}
-                    `;
+                // Check if exists
+                const { rows: existing } = await sql`
+                    SELECT id FROM bookings WHERE external_id = ${uid}
+                `;
 
-                    if (existing.length === 0) {
-                        // Insert new booking
-                        // Note: We don't have guest email/phone, so we use placeholders or parsing from description
-                        // Airbnb often puts guest name in summary "Reserved for John"
+                if (existing.length === 0) {
+                    // Insert new booking
+                    // Note: We don't have guest email/phone, so we use placeholders or parsing from description
+                    // Airbnb often puts guest name in summary "Reserved for John"
 
-                        let guestName = 'External Guest';
-                        if (summary.includes('Reserved for')) {
-                            guestName = summary.replace('Reserved for', '').trim();
-                        } else {
-                            guestName = summary;
-                        }
-
-                        // Calculate nights for price estimation (or set 0)
-                        // cost per night? We don't know the price.
-                        // We set total_price to 0 or leave null if allowed?
-                        // Schema usually requires total_price. We'll set 0.
-
-                        await sql`
-                            INSERT INTO bookings (
-                                room_id,
-                                guest_name,
-                                check_in,
-                                check_out,
-                                total_price,
-                                status,
-                                external_id,
-                                source
-                            ) VALUES (
-                                ${roomId},
-                                ${guestName},
-                                ${start.toISOString()},
-                                ${end.toISOString()},
-                                0,
-                                'confirmed',
-                                ${uid},
-                                'ical'
-                            )
-                        `;
-                        added++;
+                    let guestName = 'External Guest';
+                    if (summary.includes('Reserved for')) {
+                        guestName = summary.replace('Reserved for', '').trim();
+                    } else {
+                        guestName = summary;
                     }
-                } catch (e: any) {
-                    console.error('Error processing event:', e);
-                    errors.push(`Event ${event.uid}: ${e.message}`);
+
+                    await sql`
+                        INSERT INTO bookings (
+                            room_id,
+                            guest_name,
+                            check_in,
+                            check_out,
+                            total_price,
+                            status,
+                            external_id,
+                            source
+                        ) VALUES (
+                            ${roomId},
+                            ${guestName},
+                            ${start.toISOString()},
+                            ${end.toISOString()},
+                            0,
+                            'confirmed',
+                            ${uid},
+                            'ical'
+                        )
+                    `;
+                    added++;
                 }
+            } catch (e: any) {
+                console.error('Error processing event:', e);
+                errors.push(`Event ${event.uid}: ${e.message}`);
             }
         }
 
