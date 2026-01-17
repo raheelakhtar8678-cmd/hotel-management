@@ -59,26 +59,23 @@ export function RevenuePaceChart() {
             for (let i = 13; i >= 0; i--) {
                 const date = new Date();
                 date.setDate(date.getDate() - i);
-                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const targetYMD = date.toLocaleDateString('en-CA'); // YYYY-MM-DD
 
                 const dayRevenue = data
-                    .filter((b: any) => {
-                        const checkIn = new Date(b.check_in);
-                        return checkIn.toDateString() === date.toDateString();
-                    })
+                    .filter((b: any) => b.check_in === targetYMD)
                     .reduce((sum: number, b: any) => sum + (Number(b.total_paid) || 0), 0);
 
                 // Last year same day
                 const lastYearDate = new Date(date);
                 lastYearDate.setFullYear(lastYearDate.getFullYear() - 1);
+                const lastYearYMD = lastYearDate.toLocaleDateString('en-CA');
+
                 const lastYearRevenue = data
-                    .filter((b: any) => {
-                        const checkIn = new Date(b.check_in);
-                        return checkIn.toDateString() === lastYearDate.toDateString();
-                    })
+                    .filter((b: any) => b.check_in === lastYearYMD)
                     .reduce((sum: number, b: any) => sum + (Number(b.total_paid) || 0), 0);
 
-                days.push({ label: dateStr, thisYear: dayRevenue, lastYear: lastYearRevenue });
+                days.push({ label: dateLabel, thisYear: dayRevenue, lastYear: lastYearRevenue });
             }
             setChartData(days);
         } else if (view === 'weekly') {
@@ -91,12 +88,11 @@ export function RevenuePaceChart() {
                 weekEnd.setDate(weekEnd.getDate() + 6);
 
                 const weekLabel = `Week ${8 - i}`;
+                const startYMD = weekStart.toLocaleDateString('en-CA');
+                const endYMD = weekEnd.toLocaleDateString('en-CA');
 
                 const weekRevenue = data
-                    .filter((b: any) => {
-                        const checkIn = new Date(b.check_in);
-                        return checkIn >= weekStart && checkIn <= weekEnd;
-                    })
+                    .filter((b: any) => b.check_in >= startYMD && b.check_in <= endYMD)
                     .reduce((sum: number, b: any) => sum + (Number(b.total_paid) || 0), 0);
 
                 // Last year same week
@@ -105,11 +101,11 @@ export function RevenuePaceChart() {
                 const lastYearWeekEnd = new Date(lastYearWeekStart);
                 lastYearWeekEnd.setDate(lastYearWeekEnd.getDate() + 6);
 
+                const lyStartYMD = lastYearWeekStart.toLocaleDateString('en-CA');
+                const lyEndYMD = lastYearWeekEnd.toLocaleDateString('en-CA');
+
                 const lastYearRevenue = data
-                    .filter((b: any) => {
-                        const checkIn = new Date(b.check_in);
-                        return checkIn >= lastYearWeekStart && checkIn <= lastYearWeekEnd;
-                    })
+                    .filter((b: any) => b.check_in >= lyStartYMD && b.check_in <= lyEndYMD)
                     .reduce((sum: number, b: any) => sum + (Number(b.total_paid) || 0), 0);
 
                 weeks.push({ label: weekLabel, thisYear: weekRevenue, lastYear: lastYearRevenue });
@@ -127,10 +123,10 @@ export function RevenuePaceChart() {
             data.forEach((booking: any) => {
                 if (!booking.check_in || !booking.total_paid) return;
 
-                const checkIn = new Date(booking.check_in);
-                const year = checkIn.getFullYear();
-                const monthIndex = checkIn.getMonth();
-                const monthName = months[monthIndex];
+                // Parse YYYY-MM-DD manually to avoid timezone
+                const [y, m, d] = booking.check_in.split('-').map(Number);
+                const year = y;
+                const monthName = months[m - 1]; // m is 1-12
                 const amount = Number(booking.total_paid) || 0;
 
                 if (year === currentYear) {

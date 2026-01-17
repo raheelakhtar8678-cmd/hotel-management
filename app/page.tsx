@@ -63,8 +63,12 @@ export default async function Dashboard() {
     liftPercentage = liftVal.toFixed(1);
 
     totalRoomCount = rooms.length;
-    const today = new Date().toISOString().split('T')[0];
-    occupiedCount = bookings.filter((b: any) => b.check_in <= today && b.check_out > today).length;
+    const today = new Date();
+    occupiedCount = bookings.filter((b: any) => {
+      const start = new Date(b.check_in);
+      const end = new Date(b.check_out);
+      return start <= today && end > today;
+    }).length;
     occupancyRate = totalRoomCount ? ((occupiedCount / totalRoomCount) * 100).toFixed(0) : "0";
 
   } catch (err) {
