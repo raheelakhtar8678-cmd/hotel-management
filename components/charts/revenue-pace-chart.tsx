@@ -62,6 +62,12 @@ export function RevenuePaceChart({ propertyId }: RevenuePaceChartProps) {
         const currentYear = now.getFullYear();
         const lastYear = currentYear - 1;
 
+        // Helper to extract YYYY-MM-DD from various date formats
+        const normalizeDate = (dateStr: string) => {
+            if (!dateStr) return '';
+            return dateStr.substring(0, 10); // Works for '2024-01-17' and '2024-01-17T...'
+        };
+
         if (view === 'daily') {
             // Last 14 days
             const days: ChartData[] = [];
@@ -72,7 +78,7 @@ export function RevenuePaceChart({ propertyId }: RevenuePaceChartProps) {
                 const targetYMD = date.toLocaleDateString('en-CA'); // YYYY-MM-DD
 
                 const dayRevenue = data
-                    .filter((b: any) => b.check_in === targetYMD)
+                    .filter((b: any) => normalizeDate(b.check_in) === targetYMD)
                     .reduce((sum: number, b: any) => sum + (Number(b.total_paid) || 0), 0);
 
                 // Last year same day
@@ -81,7 +87,7 @@ export function RevenuePaceChart({ propertyId }: RevenuePaceChartProps) {
                 const lastYearYMD = lastYearDate.toLocaleDateString('en-CA');
 
                 const lastYearRevenue = data
-                    .filter((b: any) => b.check_in === lastYearYMD)
+                    .filter((b: any) => normalizeDate(b.check_in) === lastYearYMD)
                     .reduce((sum: number, b: any) => sum + (Number(b.total_paid) || 0), 0);
 
                 days.push({ label: dateLabel, thisYear: dayRevenue, lastYear: lastYearRevenue });
@@ -101,7 +107,10 @@ export function RevenuePaceChart({ propertyId }: RevenuePaceChartProps) {
                 const endYMD = weekEnd.toLocaleDateString('en-CA');
 
                 const weekRevenue = data
-                    .filter((b: any) => b.check_in >= startYMD && b.check_in <= endYMD)
+                    .filter((b: any) => {
+                        const d = normalizeDate(b.check_in);
+                        return d >= startYMD && d <= endYMD;
+                    })
                     .reduce((sum: number, b: any) => sum + (Number(b.total_paid) || 0), 0);
 
                 // Last year same week
@@ -114,7 +123,10 @@ export function RevenuePaceChart({ propertyId }: RevenuePaceChartProps) {
                 const lyEndYMD = lastYearWeekEnd.toLocaleDateString('en-CA');
 
                 const lastYearRevenue = data
-                    .filter((b: any) => b.check_in >= lyStartYMD && b.check_in <= lyEndYMD)
+                    .filter((b: any) => {
+                        const d = normalizeDate(b.check_in);
+                        return d >= lyStartYMD && d <= lyEndYMD;
+                    })
                     .reduce((sum: number, b: any) => sum + (Number(b.total_paid) || 0), 0);
 
                 weeks.push({ label: weekLabel, thisYear: weekRevenue, lastYear: lastYearRevenue });
@@ -133,15 +145,18 @@ export function RevenuePaceChart({ propertyId }: RevenuePaceChartProps) {
                 if (!booking.check_in || !booking.total_paid) return;
 
                 // Parse YYYY-MM-DD manually to avoid timezone
-                const [y, m, d] = booking.check_in.split('-').map(Number);
+                const dateStr = normalizeDate(booking.check_in);
+                const [y, m, d] = dateStr.split('-').map(Number);
                 const year = y;
                 const monthName = months[m - 1]; // m is 1-12
                 const amount = Number(booking.total_paid) || 0;
 
-                if (year === currentYear) {
-                    monthlyData[monthName].thisYear += amount;
-                } else if (year === lastYear) {
-                    monthlyData[monthName].lastYear += amount;
+                if (monthlyData[monthName]) {
+                    if (year === currentYear) {
+                        monthlyData[monthName].thisYear += amount;
+                    } else if (year === lastYear) {
+                        monthlyData[monthName].lastYear += amount;
+                    }
                 }
             });
 

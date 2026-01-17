@@ -315,6 +315,25 @@ ADD COLUMN IF NOT EXISTS caretaker_name TEXT,
 ADD COLUMN IF NOT EXISTS caretaker_email TEXT,
 ADD COLUMN IF NOT EXISTS caretaker_phone TEXT,
 ADD COLUMN IF NOT EXISTS structure_details JSONB DEFAULT '{}'::jsonb;`
+                            },
+                            {
+                                title: "7. Add Staff Management Table",
+                                sql: `CREATE TABLE IF NOT EXISTS staff (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT DEFAULT 'staff',
+  property_id UUID REFERENCES properties(id),
+  assigned_room_id UUID REFERENCES rooms(id),
+  work_start_time TEXT,
+  work_end_time TEXT,
+  contact_phone TEXT,
+  contact_email TEXT,
+  emergency_contact_name TEXT,
+  emergency_contact_phone TEXT,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive'))
+);
+CREATE INDEX IF NOT EXISTS idx_staff_property_id ON staff(property_id);`
                             }
                         ].map((item, index) => (
                             <div key={index} className="border rounded-lg overflow-hidden">
