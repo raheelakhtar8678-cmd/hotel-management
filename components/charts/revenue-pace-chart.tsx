@@ -193,7 +193,7 @@ export function RevenuePaceChart() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                         <XAxis dataKey="label" stroke="#94a3b8" style={{ fontSize: '11px' }} />
                         <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} tickFormatter={(value) => `$${value}`} />
-                        <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(value: number | undefined) => [`$${(value || 0).toLocaleString()}`, '']} />
                         <Legend />
                         <Bar dataKey="thisYear" name="This Year" fill="#6366f1" radius={[4, 4, 0, 0]} />
                         <Bar dataKey="lastYear" name="Last Year" fill="#475569" radius={[4, 4, 0, 0]} />
@@ -220,7 +220,7 @@ export function RevenuePaceChart() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                         <XAxis dataKey="label" stroke="#94a3b8" style={{ fontSize: '12px' }} />
                         <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
-                        <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(value: number | undefined) => [`$${(value || 0).toLocaleString()}`, '']} />
                         <Legend />
                         <Area
                             type="monotone"
@@ -256,7 +256,7 @@ export function RevenuePaceChart() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                     <XAxis dataKey="label" stroke="#94a3b8" style={{ fontSize: '12px' }} />
                     <YAxis stroke="#94a3b8" style={{ fontSize: '12px' }} tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
-                    <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(value: number | undefined) => [`$${(value || 0).toLocaleString()}`, '']} />
                     <Legend />
                     <Line
                         type="monotone"
