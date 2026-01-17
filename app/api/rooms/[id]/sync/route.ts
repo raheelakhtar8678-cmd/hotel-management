@@ -2,9 +2,10 @@ import { syncRoomIcal } from '@/app/lib/ical-sync';
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const roomId = params.id;
+        const { id } = await params;
+        const roomId = id;
 
         // Get URL from DB
         const { rows } = await sql`SELECT ical_url FROM rooms WHERE id = ${roomId}`;

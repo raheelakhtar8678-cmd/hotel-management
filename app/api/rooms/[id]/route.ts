@@ -1,11 +1,12 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const body = await request.json();
         const { ical_url, name, current_price, type, status } = body;
-        const roomId = params.id;
+        const { id } = await params;
+        const roomId = id;
 
         // Verify room exists
         const { rows: check } = await sql`SELECT id FROM rooms WHERE id = ${roomId}`;

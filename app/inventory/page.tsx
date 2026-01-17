@@ -37,7 +37,7 @@ export default function InventoryPage() {
         item_name: '',
         price: '',
         quantity: 1,
-        quantity: 1,
+
         item_category: 'other'
     });
     const [showSettingsDialog, setShowSettingsDialog] = useState(false);
