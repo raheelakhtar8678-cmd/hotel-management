@@ -40,7 +40,7 @@ export default function ReportsPage() {
             }
         });
 
-        return filtered.reduce((sum, b) => sum + (b.total_paid || 0), 0);
+        return filtered.reduce((sum, b) => sum + (Number(b.total_paid) || 0), 0);
     };
 
     const handleExport = () => {

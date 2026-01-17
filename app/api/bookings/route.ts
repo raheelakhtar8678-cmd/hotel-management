@@ -157,7 +157,7 @@ export async function PATCH(request: Request) {
     } catch (error) {
         console.error('Error processing refund:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to process refund' },
+            { success: false, error: error instanceof Error ? error.message : 'Failed to process refund' },
             { status: 500 }
         );
     }
