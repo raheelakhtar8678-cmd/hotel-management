@@ -40,10 +40,14 @@ create table if not exists room_extras (
 create table if not exists bookings (
   id uuid primary key default uuid_generate_v4(),
   room_id uuid references rooms(id) on delete cascade not null,
+  guest_name text not null,
+  guest_email text,
   check_in date not null,
   check_out date not null,
+  guests int default 1,
   total_paid numeric not null,
   status text check (status in ('confirmed', 'cancelled')) default 'confirmed',
+  channel text check (channel in ('booking_com', 'expedia', 'airbnb', 'direct', 'other')) default 'direct',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
