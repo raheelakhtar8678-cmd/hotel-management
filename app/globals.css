@@ -90,6 +90,17 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+
+  /* Fix native select and option elements for dark mode */
+  select {
+    color: var(--foreground);
+    background-color: var(--input);
+  }
+
+  select option {
+    color: #1e293b;
+    background-color: #f1f5f9;
+  }
 }
 
 @layer utilities {
