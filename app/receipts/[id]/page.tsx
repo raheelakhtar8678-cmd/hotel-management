@@ -72,10 +72,10 @@ export default function ReceiptPage() {
 
     const checkIn = new Date(booking.check_in);
     const checkOut = new Date(booking.check_out);
-    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+    const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
 
-    const roomTotal = booking.total_paid || 0;
-    const extrasTotal = extras.reduce((sum, e) => sum + (e.price * e.quantity), 0);
+    const roomTotal = Number(booking.total_paid) || 0;
+    const extrasTotal = extras.reduce((sum, e) => sum + (Number(e.price || 0) * Number(e.quantity || 1)), 0);
     const subtotal = roomTotal;
     const tax = subtotal * 0.1;
     const total = subtotal;
