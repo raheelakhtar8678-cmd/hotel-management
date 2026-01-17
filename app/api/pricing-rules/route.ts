@@ -17,7 +17,15 @@ export async function GET() {
             success: true,
             rules: rows || []
         });
-    } catch (error) {
+    } catch (error: any) {
+        // Handle case where pricing_rules table doesn't exist yet
+        if (error?.code === '42P01') {
+            console.log('pricing_rules table does not exist yet, returning empty array');
+            return NextResponse.json({
+                success: true,
+                rules: []
+            });
+        }
         console.error('Error fetching pricing rules:', error);
         return NextResponse.json(
             { success: false, error: 'Failed to fetch pricing rules' },
@@ -33,15 +41,17 @@ export async function POST(request: Request) {
         const {
             property_id,
             name,
+            description,
             rule_type,
             priority,
             is_active,
             conditions,
+            action,
             date_from,
             date_to,
             days_of_week,
-            adjustment_type,
-            adjustment_value
+            min_nights,
+            max_nights
         } = body;
 
         if (!property_id || !name || !rule_type) {
@@ -51,15 +61,21 @@ export async function POST(request: Request) {
             );
         }
 
+        // Build conditions and action as JSONB
+        const conditionsJson = conditions || {};
+        const actionJson = action || { type: 'percentage', value: 0 };
+
         const { rows } = await sql`
             INSERT INTO pricing_rules (
-                property_id, name, rule_type, priority, is_active,
-                conditions, date_from, date_to, days_of_week,
-                adjustment_type, adjustment_value
+                property_id, name, description, rule_type, priority, is_active,
+                conditions, action, date_from, date_to, days_of_week,
+                min_nights, max_nights
             ) VALUES (
-                ${property_id}, ${name}, ${rule_type}, ${priority || 0}, ${is_active !== false},
-                ${JSON.stringify(conditions || {})}, ${date_from || null}, ${date_to || null},
-                ${days_of_week || null}, ${adjustment_type || 'percentage'}, ${adjustment_value || 0}
+                ${property_id}, ${name}, ${description || null}, ${rule_type}, 
+                ${priority || 0}, ${is_active !== false},
+                ${JSON.stringify(conditionsJson)}, ${JSON.stringify(actionJson)}, 
+                ${date_from || null}, ${date_to || null},
+                ${days_of_week || null}, ${min_nights || null}, ${max_nights || null}
             )
             RETURNING *
         `;
@@ -68,10 +84,10 @@ export async function POST(request: Request) {
             success: true,
             rule: rows[0]
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error creating pricing rule:', error);
         return NextResponse.json(
-            { success: false, error: 'Failed to create pricing rule' },
+            { success: false, error: error?.message || 'Failed to create pricing rule' },
             { status: 500 }
         );
     }
@@ -81,7 +97,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, ...updates } = body;
+        const { id, is_active, priority, conditions, action } = body;
 
         if (!id) {
             return NextResponse.json(
@@ -90,28 +106,24 @@ export async function PATCH(request: Request) {
             );
         }
 
-        // Build update query dynamically
-        const updateFields: string[] = [];
-        const updateValues: any[] = [];
-        let paramIndex = 1;
+        // Simple update - just the common fields
+        const { rows } = await sql`
+            UPDATE pricing_rules SET
+                is_active = COALESCE(${is_active}, is_active),
+                priority = COALESCE(${priority}, priority),
+                conditions = COALESCE(${conditions ? JSON.stringify(conditions) : null}, conditions),
+                action = COALESCE(${action ? JSON.stringify(action) : null}, action),
+                updated_at = NOW()
+            WHERE id = ${id}
+            RETURNING *
+        `;
 
-        Object.entries(updates).forEach(([key, value]) => {
-            updateFields.push(`${key} = $${paramIndex}`);
-            updateValues.push(value);
-            paramIndex++;
-        });
-
-        if (updateFields.length === 0) {
+        if (rows.length === 0) {
             return NextResponse.json(
-                { success: false, error: 'No fields to update' },
-                { status: 400 }
+                { success: false, error: 'Rule not found' },
+                { status: 404 }
             );
         }
-
-        const { rows } = await sql.query(
-            `UPDATE pricing_rules SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-            [...updateValues, id]
-        );
 
         return NextResponse.json({
             success: true,

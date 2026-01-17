@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { adminClient } from "@/lib/supabase/admin";
+import { sql } from '@vercel/postgres';
 import { DollarSign, TrendingUp, Users, Calendar } from "lucide-react";
 import { RevenuePaceChart } from "@/components/charts/revenue-pace-chart";
 import { DemandHeatmap } from "@/components/charts/demand-heatmap";
@@ -16,36 +16,31 @@ export default async function Dashboard() {
   let occupancyRate = "0";
   let occupiedCount = 0;
   let totalRoomCount = 0;
-  let bookings = [];
-  let properties = [];
-  let rooms = [];
   let liftVal = 0;
 
   try {
-    const { data: bData, error: bError } = await adminClient
-      .from('bookings')
-      .select('total_paid, check_in, check_out, room_id')
-      .eq('status', 'confirmed');
-    if (bError) throw bError;
-    bookings = bData || [];
+    // Fetch bookings using Vercel Postgres
+    const { rows: bookings } = await sql`
+      SELECT total_paid, check_in, check_out, room_id 
+      FROM bookings 
+      WHERE status = 'confirmed'
+    `;
 
-    const { data: pData } = await adminClient.from('properties').select('id, base_price');
-    properties = pData || [];
-    const { data: rData } = await adminClient.from('rooms').select('id, property_id');
-    rooms = rData || [];
+    const { rows: properties } = await sql`SELECT id, base_price FROM properties`;
+    const { rows: rooms } = await sql`SELECT id, property_id FROM rooms`;
 
-    totalRevenue = bookings.reduce((acc, b) => acc + (b.total_paid || 0), 0);
+    totalRevenue = bookings.reduce((acc: number, b: any) => acc + (Number(b.total_paid) || 0), 0);
 
     let baseRevenue = 0;
     if (bookings && rooms && properties) {
       for (const booking of bookings) {
-        const room = rooms.find(r => r.id === booking.room_id);
-        const property = properties.find(p => p.id === room?.property_id);
+        const room = rooms.find((r: any) => r.id === booking.room_id);
+        const property = properties.find((p: any) => p.id === room?.property_id);
         if (property) {
           const start = new Date(booking.check_in);
           const end = new Date(booking.check_out);
           const nights = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 3600 * 24));
-          baseRevenue += (property.base_price * nights);
+          baseRevenue += (Number(property.base_price) * nights);
         }
       }
     }
@@ -55,11 +50,11 @@ export default async function Dashboard() {
 
     totalRoomCount = rooms.length;
     const today = new Date().toISOString().split('T')[0];
-    occupiedCount = bookings.filter(b => b.check_in <= today && b.check_out > today).length;
+    occupiedCount = bookings.filter((b: any) => b.check_in <= today && b.check_out > today).length;
     occupancyRate = totalRoomCount ? ((occupiedCount / totalRoomCount) * 100).toFixed(0) : "0";
 
   } catch (err) {
-    console.warn("Using Mock Data (DB connection failed)");
+    console.warn("Using Mock Data (DB connection failed)", err);
     totalRevenue = 124500;
     revenueLift = 24500;
     liftPercentage = "24.5";
