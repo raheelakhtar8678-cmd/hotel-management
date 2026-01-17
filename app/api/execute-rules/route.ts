@@ -16,9 +16,18 @@ export async function POST(request: Request) {
             // Execute rules for specific property
             const result = await PricingEngine.executeRulesForProperty(property_id);
 
+            let message = `Updated ${result.updatedRooms} rooms`;
+            if (result.updatedRooms === 0) {
+                if (result.evaluatedRulesCount && result.evaluatedRulesCount > 0) {
+                    message = `Evaluated ${result.evaluatedRulesCount} rules, but none matched current conditions (Date/Day)`;
+                } else {
+                    message = 'No active pricing rules found for this property';
+                }
+            }
+
             return NextResponse.json({
                 success: result.success,
-                message: `Updated ${result.updatedRooms} rooms`,
+                message,
                 updatedRooms: result.updatedRooms,
                 appliedRules: result.appliedRules
             });

@@ -294,9 +294,22 @@ export default function InventoryPage() {
                                     <TableCell>${Number(room.current_price ?? property?.base_price).toFixed(2)}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-col">
-                                            <span className={`font-semibold ${room.current_price !== effective.price ? 'text-primary' : ''}`}>
-                                                ${effective.price.toFixed(2)}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className={`font-bold ${effective.price > (room.current_price ?? property?.base_price)
+                                                        ? 'text-red-500'
+                                                        : effective.price < (room.current_price ?? property?.base_price)
+                                                            ? 'text-green-600'
+                                                            : ''
+                                                    }`}>
+                                                    ${effective.price.toFixed(2)}
+                                                </span>
+                                                {effective.reasons.length > 0 && (
+                                                    <span className="relative flex h-2 w-2">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                                    </span>
+                                                )}
+                                            </div>
                                             {effective.reasons.length > 0 && (
                                                 <span className="text-[10px] text-muted-foreground">
                                                     {effective.reasons.join(', ')}

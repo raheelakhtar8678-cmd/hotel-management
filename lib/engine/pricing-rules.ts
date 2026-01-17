@@ -37,6 +37,7 @@ export class PricingEngine {
         success: boolean;
         updatedRooms: number;
         appliedRules: string[];
+        evaluatedRulesCount?: number;
     }> {
         try {
             // Fetch active rules for this property, ordered by priority
@@ -108,7 +109,8 @@ export class PricingEngine {
             return {
                 success: true,
                 updatedRooms: updatedCount,
-                appliedRules: appliedRuleNames
+                appliedRules: appliedRuleNames,
+                evaluatedRulesCount: rules?.length || 0
             };
 
         } catch (error) {
