@@ -67,8 +67,8 @@ export default function InteractiveCalendar({ propertyId }: InteractiveCalendarP
         return dateBookings.reduce((sum, b) => {
             const checkIn = new Date(b.check_in);
             const checkOut = new Date(b.check_out);
-            const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-            const pricePerNight = (b.total_paid || 0) / nights;
+            const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+            const pricePerNight = Number(b.total_paid || 0) / nights;
             return sum + pricePerNight;
         }, 0);
     };
@@ -179,8 +179,8 @@ export default function InteractiveCalendar({ propertyId }: InteractiveCalendarP
                                 {selectedDateBookings.map((booking) => {
                                     const checkIn = new Date(booking.check_in);
                                     const checkOut = new Date(booking.check_out);
-                                    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-                                    const pricePerNight = (booking.total_paid || 0) / nights;
+                                    const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+                                    const pricePerNight = Number(booking.total_paid || 0) / nights;
 
                                     return (
                                         <div
@@ -216,7 +216,7 @@ export default function InteractiveCalendar({ propertyId }: InteractiveCalendarP
                                                 <div>
                                                     <span className="text-muted-foreground">Total:</span>
                                                     <span className="ml-2 font-semibold">
-                                                        ${booking.total_paid.toFixed(2)}
+                                                        ${Number(booking.total_paid || 0).toFixed(2)}
                                                     </span>
                                                 </div>
                                             </div>

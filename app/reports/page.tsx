@@ -48,7 +48,7 @@ export default function ReportsPage() {
             Date: new Date(b.check_in).toLocaleDateString(),
             Guest: b.guest_name,
             Property: b.property_name,
-            Revenue: `$${b.total_paid.toFixed(2)}`,
+            Revenue: `$${Number(b.total_paid || 0).toFixed(2)}`,
             Status: b.status
         }));
         exportRevenueToCSV(revenueData, period);
@@ -168,7 +168,7 @@ export default function ReportsPage() {
                                         </p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-bold text-emerald-600">${booking.total_paid.toFixed(2)}</p>
+                                        <p className="font-bold text-emerald-600">${Number(booking.total_paid || 0).toFixed(2)}</p>
                                         <p className="text-xs text-muted-foreground">{booking.status}</p>
                                     </div>
                                 </div>
