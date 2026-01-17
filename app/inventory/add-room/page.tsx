@@ -43,6 +43,7 @@ export default function AddRoomPage() {
         const propertyId = formData.get('property_id') as string;
         const roomType = formData.get('room_type') as string;
         const status = formData.get('status') as string;
+        const name = formData.get('name') as string;
 
         try {
             const response = await fetch('/api/rooms', {
@@ -52,6 +53,7 @@ export default function AddRoomPage() {
                     property_id: propertyId,
                     type: roomType,
                     status: status,
+                    name: name
                 }),
             });
 
@@ -110,6 +112,17 @@ export default function AddRoomPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Room Name / Number *</Label>
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    placeholder="e.g., 101, 204, Penthouse"
+                                    required
+                                    className="bg-input border-primary/20"
+                                />
                             </div>
 
                             <div className="space-y-2">

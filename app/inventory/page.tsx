@@ -161,7 +161,7 @@ export default function InventoryPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Room ID</TableHead>
+                            <TableHead>Room Name</TableHead>
                             <TableHead>Property</TableHead>
                             <TableHead>Type</TableHead>
                             <TableHead>Status</TableHead>
@@ -180,7 +180,7 @@ export default function InventoryPage() {
 
                             return (
                                 <TableRow key={room.id}>
-                                    <TableCell className="font-medium">{room.id ? `${room.id.slice(0, 8)}...` : 'N/A'}</TableCell>
+                                    <TableCell className="font-medium">{room.name || (room.id ? `${room.id.slice(0, 8)}...` : 'N/A')}</TableCell>
                                     <TableCell>{property?.name}</TableCell>
                                     <TableCell>{room.type || 'Unknown'}</TableCell>
                                     <TableCell>

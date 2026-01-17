@@ -31,6 +31,7 @@ interface Staff {
     property_id: string;
     property_name?: string;
     assigned_room_id?: string;
+    room_name?: string;
     work_start_time?: string;
     work_end_time?: string;
     contact_phone?: string;
@@ -337,8 +338,7 @@ export default function StaffPage() {
                                 </div>
                                 {staff.assigned_room_id && (
                                     <div className="flex items-center text-muted-foreground pl-6">
-                                        ➤ Assigned: Room {staff.assigned_room_id}
-                                        {/* Ideally we mapped ID to Name, but API does partial join. See API. */}
+                                        ➤ Assigned: {staff.room_name || `Room ${staff.assigned_room_id.slice(0, 4)}...`}
                                     </div>
                                 )}
                             </div>

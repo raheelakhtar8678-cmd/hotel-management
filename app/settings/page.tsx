@@ -334,6 +334,33 @@ ADD COLUMN IF NOT EXISTS structure_details JSONB DEFAULT '{}'::jsonb;`
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive'))
 );
 CREATE INDEX IF NOT EXISTS idx_staff_property_id ON staff(property_id);`
+                            },
+                            {
+                                title: "8. Create Pricing Rules Table",
+                                sql: `CREATE TABLE IF NOT EXISTS pricing_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    property_id UUID REFERENCES properties(id) ON DELETE CASCADE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    rule_type TEXT CHECK (rule_type IN ('early_bird', 'last_minute', 'long_stay', 'weekend', 'seasonal', 'custom')) NOT NULL,
+    priority INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    conditions JSONB DEFAULT '{}'::jsonb,
+    action JSONB DEFAULT '{"type":"percentage","value":0}'::jsonb,
+    date_from DATE,
+    date_to DATE,
+    days_of_week TEXT,
+    min_nights INTEGER,
+    max_nights INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE
+);
+CREATE INDEX IF NOT EXISTS idx_pricing_rules_property ON pricing_rules(property_id);`
+                            },
+                            {
+                                title: "9. Add Room Names",
+                                sql: `ALTER TABLE rooms ADD COLUMN IF NOT EXISTS name TEXT;
+UPDATE rooms SET name = 'Room-' || substring(id::text, 1, 4) WHERE name IS NULL;`
                             }
                         ].map((item, index) => (
                             <div key={index} className="border rounded-lg overflow-hidden">

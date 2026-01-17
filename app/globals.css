@@ -153,3 +153,25 @@
     color: #6366f1;
   }
 }
+@media print {
+  header, nav, aside, footer, .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+    color: black;
+    -webkit-print-color-adjust: exact;
+  }
+  .glass-card, .card {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  /* Minimize padding to fit content */
+  .p-8, .p-6 {
+    padding: 1rem !important;
+  }
+  @page {
+    margin: 0.5cm;
+    size: auto;
+  }
+}

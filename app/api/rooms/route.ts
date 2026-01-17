@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { property_id, type, status } = body;
+        const { property_id, type, status, name } = body;
 
         if (!property_id) {
             return NextResponse.json(
@@ -60,13 +60,14 @@ export async function POST(request: Request) {
 
         const { rows } = await sql`
             INSERT INTO rooms (
-                property_id, type, status, current_price, last_logic_reason
+                property_id, type, status, current_price, last_logic_reason, name
             ) VALUES (
                 ${property_id},
                 ${type || 'Standard'},
                 ${status || 'available'},
                 ${property?.base_price || 100},
-                'Initial setup'
+                'Initial setup',
+                ${name || ('Room ' + Date.now().toString().slice(-4))}
             )
             RETURNING *
         `;
