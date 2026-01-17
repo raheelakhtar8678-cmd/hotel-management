@@ -54,7 +54,11 @@ export async function POST(request: Request) {
             bathrooms,
             max_guests,
             base_price,
-            timezone
+            timezone,
+            caretaker_name,
+            caretaker_email,
+            caretaker_phone,
+            structure_details
         } = body;
 
         if (!name || !base_price) {
@@ -69,7 +73,6 @@ export async function POST(request: Request) {
         const userId = '00000000-0000-0000-0000-000000000001';
 
         // Calculate min and max prices automatically
-        // min_price = 50% of base_price, max_price = 200% of base_price
         const min_price = Math.floor(base_price * 0.5);
         const max_price = Math.floor(base_price * 2);
 
@@ -79,13 +82,15 @@ export async function POST(request: Request) {
                 user_id, name, property_type, city, country, address, 
                 bedrooms, bathrooms, max_guests, 
                 base_price, min_price, max_price, 
-                timezone, is_active
+                timezone, is_active,
+                caretaker_name, caretaker_email, caretaker_phone, structure_details
             ) VALUES (
                 ${userId}, ${name}, ${property_type || 'apartment'}, ${city}, 
                 ${country || 'USA'}, ${address}, ${bedrooms || 1}, ${bathrooms || 1}, 
                 ${max_guests || 2}, 
                 ${base_price}, ${min_price}, ${max_price},
-                ${timezone || 'UTC'}, true
+                ${timezone || 'UTC'}, true,
+                ${caretaker_name}, ${caretaker_email}, ${caretaker_phone}, ${structure_details || '{}'}
             )
             RETURNING *;
         `;
@@ -134,15 +139,6 @@ export async function PATCH(request: Request) {
             );
         }
 
-        // Dynamic update query building is tricky with tagged templates.
-        // For simplicity in this migration, we'll manually check fields or just execute a fixed update 
-        // if we knew the fields. Since 'updates' is dynamic, it's harder with strict SQL tags.
-        // Let's assume we update specific known fields for now or use a helper if we had one.
-        // For MVP speed: just update common fields.
-
-        // A robust way for dynamic updates with @vercel/postgres needs a helper.
-        // We will just try to update all potential fields if they exist in body.
-
         const { rows } = await sql`
             UPDATE properties SET
                 name = COALESCE(${updates.name}, name),
@@ -150,8 +146,12 @@ export async function PATCH(request: Request) {
                 min_price = COALESCE(${updates.min_price}, min_price),
                 max_price = COALESCE(${updates.max_price}, max_price),
                 property_type = COALESCE(${updates.property_type}, property_type),
-                 city = COALESCE(${updates.city}, city),
-                 country = COALESCE(${updates.country}, country)
+                city = COALESCE(${updates.city}, city),
+                country = COALESCE(${updates.country}, country),
+                caretaker_name = COALESCE(${updates.caretaker_name}, caretaker_name),
+                caretaker_email = COALESCE(${updates.caretaker_email}, caretaker_email),
+                caretaker_phone = COALESCE(${updates.caretaker_phone}, caretaker_phone),
+                structure_details = COALESCE(${updates.structure_details}, structure_details)
             WHERE id = ${id}
             RETURNING *
         `;
@@ -168,6 +168,8 @@ export async function PATCH(request: Request) {
         );
     }
 }
+
+
 
 // DELETE: Archive property (soft delete)
 export async function DELETE(request: Request) {

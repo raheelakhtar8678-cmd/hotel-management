@@ -17,6 +17,10 @@ create table if not exists properties (
   base_price numeric not null,
   min_price numeric not null,
   max_price numeric not null,
+  caretaker_name text,
+  caretaker_email text,
+  caretaker_phone text,
+  structure_details jsonb default '{}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -116,6 +120,13 @@ CHECK (status IN ('confirmed', 'cancelled', 'refunded'));
 
 -- 3. Add index for performance
 CREATE INDEX IF NOT EXISTS idx_bookings_refunds ON bookings(refund_amount) WHERE refund_amount > 0;
+
+-- 4. Add Property Caretaker & Structure Info
+ALTER TABLE properties
+ADD COLUMN IF NOT EXISTS caretaker_name TEXT,
+ADD COLUMN IF NOT EXISTS caretaker_email TEXT,
+ADD COLUMN IF NOT EXISTS caretaker_phone TEXT,
+ADD COLUMN IF NOT EXISTS structure_details JSONB DEFAULT '{}'::jsonb;
 ```
 
 ## 3. Seed Initial Data (Optional)
@@ -128,3 +139,4 @@ VALUES ('Seaside Villa', 150.00, 100.00, 300.00);
 -- Insert a test room (Use the ID from above)
 -- INSERT INTO rooms (property_id, type, status, current_price) VALUES ('<property_id_here>', 'Deluxe Suite', 'available', 150.00);
 ```
+ fo

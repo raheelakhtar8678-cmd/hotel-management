@@ -307,6 +307,14 @@ ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMP WITH TIME ZONE;`
 ALTER TABLE bookings 
 ADD CONSTRAINT bookings_status_check 
 CHECK (status IN ('confirmed', 'cancelled', 'refunded'));`
+                            },
+                            {
+                                title: "6. Add Property Details (Caretaker & Structure)",
+                                sql: `ALTER TABLE properties
+ADD COLUMN IF NOT EXISTS caretaker_name TEXT,
+ADD COLUMN IF NOT EXISTS caretaker_email TEXT,
+ADD COLUMN IF NOT EXISTS caretaker_phone TEXT,
+ADD COLUMN IF NOT EXISTS structure_details JSONB DEFAULT '{}'::jsonb;`
                             }
                         ].map((item, index) => (
                             <div key={index} className="border rounded-lg overflow-hidden">

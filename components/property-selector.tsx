@@ -36,14 +36,16 @@ export function PropertySelector({ currentPropertyId, onPropertyChange }: Proper
     const [loading, setLoading] = useState(true);
     const [addDialogOpen, setAddDialogOpen] = useState(false);
 
+    // Form state
+    const [newPropertyType, setNewPropertyType] = useState("apartment");
+
     useEffect(() => {
         fetchProperties();
-        // Sync state from cookie on mount if available
         const match = document.cookie.match(new RegExp('(^| )yieldvibe_property_id=([^;]+)'));
         if (match && !currentPropertyId) {
             setSelectedId(match[2]);
         }
-    }, []);
+    }, [currentPropertyId]);
 
     const fetchProperties = async () => {
         try {
@@ -52,7 +54,6 @@ export function PropertySelector({ currentPropertyId, onPropertyChange }: Proper
             const data = await response.json();
             setProperties(data.properties || []);
 
-            // Set first active property if no selection
             if (!currentPropertyId && data.properties?.length > 0) {
                 const firstActive = data.properties.find((p: Property) => p.is_active);
                 if (firstActive) {
@@ -70,19 +71,29 @@ export function PropertySelector({ currentPropertyId, onPropertyChange }: Proper
     const handleChange = (value: string) => {
         setSelectedId(value);
         onPropertyChange?.(value);
-
-        // Store in Cookie for Server Components
-        document.cookie = `yieldvibe_property_id=${value}; path=/; max-age=31536000`; // 1 year
-
-        // Refresh server components
+        document.cookie = `yieldvibe_property_id=${value}; path=/; max-age=31536000`;
         router.refresh();
     };
 
     const handleAddProperty = async (formData: FormData) => {
         const name = formData.get('name') as string;
-        const propertyType = formData.get('property_type') as string;
+        const propertyType = newPropertyType;
         const city = formData.get('city') as string;
         const basePrice = formData.get('base_price') as string;
+
+        // Caretaker Info
+        const caretakerName = formData.get('caretaker_name') as string;
+        const caretakerEmail = formData.get('caretaker_email') as string;
+        const caretakerPhone = formData.get('caretaker_phone') as string;
+
+        // Structure Info
+        const structureDetails: any = {};
+        if (propertyType === 'hotel') {
+            structureDetails.floors = Number(formData.get('floors')) || 1;
+        } else {
+            structureDetails.bedrooms = Number(formData.get('bedrooms')) || 1;
+            structureDetails.bathrooms = Number(formData.get('bathrooms')) || 1;
+        }
 
         try {
             const response = await fetch('/api/properties', {
@@ -93,14 +104,21 @@ export function PropertySelector({ currentPropertyId, onPropertyChange }: Proper
                     property_type: propertyType,
                     city,
                     base_price: Number(basePrice) || 100,
+                    caretaker_name: caretakerName,
+                    caretaker_email: caretakerEmail,
+                    caretaker_phone: caretakerPhone,
+                    structure_details: structureDetails,
+                    // Keep existing schema fields if API expects them directly too
+                    bedrooms: structureDetails.bedrooms,
+                    bathrooms: structureDetails.bathrooms
                 }),
             });
 
             if (response.ok) {
                 const data = await response.json();
                 setAddDialogOpen(false);
-                fetchProperties(); // Refresh list
-                handleChange(data.property.id); // Select new property
+                fetchProperties();
+                handleChange(data.property.id);
             } else {
                 alert('Failed to create property');
             }
@@ -173,7 +191,7 @@ export function PropertySelector({ currentPropertyId, onPropertyChange }: Proper
                         <Plus className="h-4 w-4" />
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="glass-card border-primary/20">
+                <DialogContent className="glass-card border-primary/20 max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Building2 className="h-5 w-5 text-primary" />
@@ -183,19 +201,13 @@ export function PropertySelector({ currentPropertyId, onPropertyChange }: Proper
                     <form action={handleAddProperty} className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="name">Property Name *</Label>
-                            <Input
-                                id="name"
-                                name="name"
-                                placeholder="Grand Hotel Downtown"
-                                required
-                                className="bg-input border-primary/20"
-                            />
+                            <Input id="name" name="name" placeholder="Grand Hotel" required className="bg-input border-primary/20" />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="property_type">Type *</Label>
-                                <Select name="property_type" defaultValue="apartment">
+                                <Select onValueChange={setNewPropertyType} defaultValue="apartment">
                                     <SelectTrigger className="bg-input border-primary/20">
                                         <SelectValue />
                                     </SelectTrigger>
@@ -203,35 +215,62 @@ export function PropertySelector({ currentPropertyId, onPropertyChange }: Proper
                                         <SelectItem value="hotel">Hotel</SelectItem>
                                         <SelectItem value="apartment">Apartment</SelectItem>
                                         <SelectItem value="house">House</SelectItem>
-                                        <SelectItem value="condo">Condo</SelectItem>
                                         <SelectItem value="villa">Villa</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
+                                        <SelectItem value="condo">Condo</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="base_price">Base Price ($) *</Label>
-                                <Input
-                                    id="base_price"
-                                    name="base_price"
-                                    type="number"
-                                    placeholder="100"
-                                    required
-                                    min="1"
-                                    className="bg-input border-primary/20"
-                                />
+                                <Input id="base_price" name="base_price" type="number" placeholder="100" required className="bg-input border-primary/20" />
+                            </div>
+                        </div>
+
+                        {/* Structure Details Section */}
+                        <div className="p-3 bg-secondary/20 rounded-lg space-y-3">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Property Structure</div>
+                            {newPropertyType === 'hotel' ? (
+                                <div className="space-y-2">
+                                    <Label htmlFor="floors">Number of Floors</Label>
+                                    <Input id="floors" name="floors" type="number" placeholder="5" className="bg-input border-primary/20" />
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bedrooms">Bedrooms</Label>
+                                        <Input id="bedrooms" name="bedrooms" type="number" placeholder="2" className="bg-input border-primary/20" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bathrooms">Bathrooms</Label>
+                                        <Input id="bathrooms" name="bathrooms" type="number" placeholder="1" className="bg-input border-primary/20" />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Caretaker / Staff Section */}
+                        <div className="p-3 bg-secondary/20 rounded-lg space-y-3">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Caretaker / Staff (Optional)</div>
+                            <div className="space-y-2">
+                                <Label htmlFor="caretaker_name">Name</Label>
+                                <Input id="caretaker_name" name="caretaker_name" placeholder="John Doe" className="bg-input border-primary/20" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="caretaker_phone">Phone</Label>
+                                    <Input id="caretaker_phone" name="caretaker_phone" placeholder="+1 555-0123" className="bg-input border-primary/20" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="caretaker_email">Email</Label>
+                                    <Input id="caretaker_email" name="caretaker_email" type="email" placeholder="john@example.com" className="bg-input border-primary/20" />
+                                </div>
                             </div>
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="city">City</Label>
-                            <Input
-                                id="city"
-                                name="city"
-                                placeholder="San Francisco"
-                                className="bg-input border-primary/20"
-                            />
+                            <Input id="city" name="city" placeholder="New York" className="bg-input border-primary/20" />
                         </div>
 
                         <Button type="submit" className="w-full bg-gradient-primary">
