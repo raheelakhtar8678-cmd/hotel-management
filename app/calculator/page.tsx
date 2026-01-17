@@ -241,9 +241,9 @@ export default function CalculatorPage() {
                                     </div>
                                 </div>
                                 {nights > 0 && (
-                                    <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
-                                        <p className="text-sm font-semibold">
-                                            Total Nights: <span className="text-primary">{nights}</span>
+                                    <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
+                                        <p className="text-sm font-semibold text-center">
+                                            Total Nights: <span className="text-primary text-lg">{nights}</span>
                                         </p>
                                     </div>
                                 )}
