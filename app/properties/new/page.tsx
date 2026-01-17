@@ -29,16 +29,26 @@ export default function AddPropertyPage() {
         bedrooms: '',
         bathrooms: '',
         max_guests: '',
+        floors: '',
+        caretaker_name: '',
+        caretaker_email: '',
+        caretaker_phone: ''
     });
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setSaving(true);
 
-        console.log('🔵 Starting property creation...');
-        console.log('Form data:', formData);
-
         try {
+            // Construct structure details
+            const structureDetails: any = {};
+            if (formData.property_type === 'hotel') {
+                structureDetails.floors = Number(formData.floors) || 1;
+            } else {
+                structureDetails.bedrooms = Number(formData.bedrooms) || 1;
+                structureDetails.bathrooms = Number(formData.bathrooms) || 1;
+            }
+
             const payload = {
                 name: formData.name,
                 property_type: formData.property_type,
@@ -49,9 +59,11 @@ export default function AddPropertyPage() {
                 bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
                 bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
                 max_guests: formData.max_guests ? Number(formData.max_guests) : null,
+                caretaker_name: formData.caretaker_name,
+                caretaker_email: formData.caretaker_email,
+                caretaker_phone: formData.caretaker_phone,
+                structure_details: structureDetails
             };
-
-            console.log('📤 Sending to API:', payload);
 
             const response = await fetch('/api/properties', {
                 method: 'POST',
@@ -59,17 +71,11 @@ export default function AddPropertyPage() {
                 body: JSON.stringify(payload),
             });
 
-            console.log('📥 Response status:', response.status);
-
             const data = await response.json();
-            console.log('📥 Response data:', data);
 
             if (data.success) {
-                console.log('✅ Property created successfully!');
-                alert('Property created successfully!');
                 router.push('/properties');
             } else {
-                console.error('❌ Failed to create property:', data.error);
                 alert(`Failed to create property: ${data.error || 'Unknown error'}`);
             }
         } catch (error) {
@@ -180,50 +186,124 @@ export default function AddPropertyPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Property Details */}
+                    {/* Property Structure */}
                     <Card className="glass-card">
                         <CardHeader>
-                            <CardTitle>Property Details</CardTitle>
-                            <CardDescription>Rooms, bathrooms, and capacity</CardDescription>
+                            <CardTitle>Structure Details</CardTitle>
+                            <CardDescription>
+                                {formData.property_type === 'hotel' ? 'Floors and capacity' : 'Bedrooms, bathrooms, and capacity'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-3 gap-4">
+                            {formData.property_type === 'hotel' ? (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="floors">Number of Floors</Label>
+                                        <Input
+                                            id="floors"
+                                            type="number"
+                                            min="1"
+                                            value={formData.floors}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, floors: e.target.value }))}
+                                            placeholder="5"
+                                            className="bg-input border-primary/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="max_guests">Max Capacity (Guests)</Label>
+                                        <Input
+                                            id="max_guests"
+                                            type="number"
+                                            min="1"
+                                            value={formData.max_guests}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, max_guests: e.target.value }))}
+                                            placeholder="100"
+                                            className="bg-input border-primary/20"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bedrooms">Bedrooms</Label>
+                                        <Input
+                                            id="bedrooms"
+                                            type="number"
+                                            min="0"
+                                            value={formData.bedrooms}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: e.target.value }))}
+                                            placeholder="2"
+                                            className="bg-input border-primary/20"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="bathrooms">Bathrooms</Label>
+                                        <Input
+                                            id="bathrooms"
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            value={formData.bathrooms}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: e.target.value }))}
+                                            placeholder="1.5"
+                                            className="bg-input border-primary/20"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="max_guests">Max Guests</Label>
+                                        <Input
+                                            id="max_guests"
+                                            type="number"
+                                            min="1"
+                                            value={formData.max_guests}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, max_guests: e.target.value }))}
+                                            placeholder="4"
+                                            className="bg-input border-primary/20"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Caretaker / Staff Section */}
+                    <Card className="glass-card">
+                        <CardHeader>
+                            <CardTitle>Caretaker / Staff (Optional)</CardTitle>
+                            <CardDescription>Contact information for property manager</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="caretaker_name">Name</Label>
+                                <Input
+                                    id="caretaker_name"
+                                    value={formData.caretaker_name}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, caretaker_name: e.target.value }))}
+                                    placeholder="John Doe"
+                                    className="bg-input border-primary/20"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="bedrooms">Bedrooms</Label>
+                                    <Label htmlFor="caretaker_phone">Phone</Label>
                                     <Input
-                                        id="bedrooms"
-                                        type="number"
-                                        min="0"
-                                        value={formData.bedrooms}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: e.target.value }))}
-                                        placeholder="0"
+                                        id="caretaker_phone"
+                                        value={formData.caretaker_phone}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, caretaker_phone: e.target.value }))}
+                                        placeholder="+1 555-0123"
                                         className="bg-input border-primary/20"
                                     />
                                 </div>
-
                                 <div className="space-y-2">
-                                    <Label htmlFor="bathrooms">Bathrooms</Label>
+                                    <Label htmlFor="caretaker_email">Email</Label>
                                     <Input
-                                        id="bathrooms"
-                                        type="number"
-                                        min="0"
-                                        step="0.5"
-                                        value={formData.bathrooms}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: e.target.value }))}
-                                        placeholder="0"
-                                        className="bg-input border-primary/20"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="max_guests">Max Guests</Label>
-                                    <Input
-                                        id="max_guests"
-                                        type="number"
-                                        min="1"
-                                        value={formData.max_guests}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, max_guests: e.target.value }))}
-                                        placeholder="1"
+                                        id="caretaker_email"
+                                        type="email"
+                                        value={formData.caretaker_email}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, caretaker_email: e.target.value }))}
+                                        placeholder="john@example.com"
                                         className="bg-input border-primary/20"
                                     />
                                 </div>
