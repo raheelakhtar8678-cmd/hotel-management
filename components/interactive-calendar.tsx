@@ -138,7 +138,7 @@ export default function InteractiveCalendar({ propertyId }: InteractiveCalendarP
                                         aspect-square p-2 rounded-lg border cursor-pointer transition-all
                                         ${isSelected ? 'border-primary bg-primary/10' : 'border-transparent hover:border-primary/50 hover:bg-secondary/50'}
                                         ${isToday ? 'ring-2 ring-primary/30' : ''}
-                                        ${dateHasBookings ? 'bg-emerald-50 dark:bg-emerald-950/20' : ''}
+                                        ${dateHasBookings ? 'bg-emerald-100/50 dark:bg-emerald-900/30 border-emerald-500 ring-1 ring-emerald-500/20' : ''}
                                     `}
                                 >
                                     <div className="flex flex-col h-full">

@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Calculator as CalcIcon, Plus, X, FileText } from "lucide-react";
 
 export default function CalculatorPage() {
@@ -20,6 +27,8 @@ export default function CalculatorPage() {
     const [extras, setExtras] = useState<any[]>([]);
     const [newExtra, setNewExtra] = useState({ name: '', price: '', quantity: 1 });
     const [pricingRules, setPricingRules] = useState<any[]>([]);
+    const [pricingMode, setPricingMode] = useState('auto');
+    const [selectedRuleId, setSelectedRuleId] = useState('');
     const [appliedRules, setAppliedRules] = useState<any[]>([]);
 
     useEffect(() => {
@@ -97,6 +106,10 @@ export default function CalculatorPage() {
         const daysUntilCheckIn = Math.ceil((checkInDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
         pricingRules.forEach(rule => {
+            // Filter based on mode
+            if (pricingMode === 'none') return;
+            if (pricingMode === 'manual' && rule.id !== selectedRuleId) return;
+
             let applies = false;
             const conditions = rule.conditions;
 
@@ -144,10 +157,18 @@ export default function CalculatorPage() {
 
                 if (action.type === 'discount') {
                     adjustmentsTotal -= amount;
-                    activeAdjustments.push({ name: rule.name, amount: -amount });
+                    activeAdjustments.push({
+                        name: rule.name,
+                        amount: -amount,
+                        percentage: action.unit === 'percent' ? action.value : null
+                    });
                 } else {
                     adjustmentsTotal += amount;
-                    activeAdjustments.push({ name: rule.name, amount: amount });
+                    activeAdjustments.push({
+                        name: rule.name,
+                        amount: amount,
+                        percentage: action.unit === 'percent' ? action.value : null
+                    });
                 }
             }
         });
@@ -293,6 +314,35 @@ export default function CalculatorPage() {
                                         ))}
                                     </select>
                                 </div>
+
+                                <div className="pt-4 border-t">
+                                    <Label className="mb-2 block">Pricing Strategy</Label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Select value={pricingMode} onValueChange={setPricingMode}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="auto">Automatic (Active Rules)</SelectItem>
+                                                <SelectItem value="manual">Manual Selection</SelectItem>
+                                                <SelectItem value="none">No Rules (Base Price)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+
+                                        {pricingMode === 'manual' && (
+                                            <Select value={selectedRuleId} onValueChange={setSelectedRuleId}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Choose rule..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {pricingRules.map(r => (
+                                                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
 
@@ -397,7 +447,10 @@ export default function CalculatorPage() {
                                             {/* Adjustments */}
                                             {activeAdjustments.map((adj, idx) => (
                                                 <div key={idx} className="flex justify-between text-sm text-emerald-600">
-                                                    <span>{adj.name}</span>
+                                                    <span>
+                                                        {adj.name}
+                                                        {adj.percentage && <span className="text-xs ml-1 opacity-70">({adj.percentage}%)</span>}
+                                                    </span>
                                                     <span>{adj.amount > 0 ? '+' : ''}{adj.amount.toFixed(2)}</span>
                                                 </div>
                                             ))}
