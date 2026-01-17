@@ -1,39 +1,119 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from 'react';
+
+interface DayData {
+    date: Date;
+    day: number;
+    month: string;
+    weekday: string;
+    demand: number;
+    bookingCount: number;
+}
 
 export function DemandHeatmap() {
-    // Generate 30 days of demand data
-    const generateDemandData = () => {
-        const data = [];
+    const [demandData, setDemandData] = useState<DayData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [totalRooms, setTotalRooms] = useState(0);
+
+    useEffect(() => {
+        fetchDemandData();
+    }, []);
+
+    const fetchDemandData = async () => {
+        try {
+            // Fetch bookings and rooms
+            const [bookingsRes, roomsRes] = await Promise.all([
+                fetch('/api/bookings'),
+                fetch('/api/rooms')
+            ]);
+
+            const bookingsData = await bookingsRes.json();
+            const roomsData = await roomsRes.json();
+
+            const bookings = bookingsData.bookings || [];
+            const rooms = roomsData.rooms || [];
+            setTotalRooms(rooms.length);
+
+            // Generate 30 days of demand data
+            const data: DayData[] = [];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                const dateStr = date.toISOString().split('T')[0];
+
+                // Count bookings for this date (where date is between check_in and check_out)
+                const bookingsOnDate = bookings.filter((b: any) => {
+                    const checkIn = new Date(b.check_in);
+                    const checkOut = new Date(b.check_out);
+                    checkIn.setHours(0, 0, 0, 0);
+                    checkOut.setHours(0, 0, 0, 0);
+                    return date >= checkIn && date < checkOut;
+                });
+
+                // Calculate occupancy percentage as demand
+                // If no rooms, use random demand + weekend bonus
+                let demand = 0;
+                if (rooms.length > 0) {
+                    demand = Math.round((bookingsOnDate.length / rooms.length) * 100);
+                } else {
+                    // Fallback: simulate demand based on day of week
+                    const dayOfWeek = date.getDay();
+                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                    const baseDemand = isWeekend ? 65 : 45;
+                    demand = Math.round(baseDemand + Math.random() * 25 - 10);
+                }
+
+                // Cap at 100%
+                demand = Math.min(100, Math.max(0, demand));
+
+                data.push({
+                    date: date,
+                    day: date.getDate(),
+                    month: date.toLocaleDateString('en-US', { month: 'short' }),
+                    weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                    demand: demand,
+                    bookingCount: bookingsOnDate.length
+                });
+            }
+
+            setDemandData(data);
+        } catch (error) {
+            console.error('Error fetching demand data:', error);
+            // Generate fallback data
+            generateFallbackData();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const generateFallbackData = () => {
+        const data: DayData[] = [];
         const today = new Date();
 
         for (let i = 0; i < 30; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() + i);
-
-            // Simulate demand based on day of week (higher on weekends)
             const dayOfWeek = date.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-            // Base demand + weekend bonus + some randomness
-            const baseDemand = isWeekend ? 70 : 50;
-            const demand = Math.min(100, Math.max(20, baseDemand + Math.random() * 30 - 15));
+            const baseDemand = isWeekend ? 65 : 45;
+            const demand = Math.round(baseDemand + Math.random() * 30 - 15);
 
             data.push({
                 date: date,
                 day: date.getDate(),
                 month: date.toLocaleDateString('en-US', { month: 'short' }),
                 weekday: date.toLocaleDateString('en-US', { weekday: 'short' }),
-                demand: Math.round(demand),
+                demand: Math.min(100, Math.max(0, demand)),
+                bookingCount: 0
             });
         }
-
-        return data;
+        setDemandData(data);
     };
-
-    const demandData = generateDemandData();
 
     // Get demand level and color
     const getDemandLevel = (demand: number) => {
@@ -42,6 +122,17 @@ export function DemandHeatmap() {
         if (demand >= 40) return { level: 'Medium', color: 'bg-yellow-500', textColor: 'text-yellow-500', borderColor: 'border-yellow-500/30' };
         return { level: 'Low', color: 'bg-emerald-500', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/30' };
     };
+
+    if (loading) {
+        return (
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold">30-Day Demand Forecast</h3>
+                <div className="h-64 flex items-center justify-center text-muted-foreground">
+                    Loading demand data...
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-4">
@@ -88,7 +179,7 @@ export function DemandHeatmap() {
                             style={{
                                 backgroundColor: `${demandInfo.color}15`,
                             }}
-                            title={`${day.weekday} ${day.month} ${day.day}: ${day.demand}% demand - ${demandInfo.level}`}
+                            title={`${day.weekday} ${day.month} ${day.day}: ${day.demand}% occupancy - ${demandInfo.level}${day.bookingCount > 0 ? ` (${day.bookingCount} bookings)` : ''}`}
                         >
                             {/* Date Badge */}
                             <div className="flex flex-col items-center gap-1">
@@ -162,8 +253,11 @@ export function DemandHeatmap() {
             {/* Insights */}
             <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
                 <p className="text-sm text-muted-foreground">
-                    💡 <strong className="text-foreground">Pricing Tip:</strong> High demand days (orange/red) are optimal for surge pricing.
-                    Low demand days (green) are good for last-minute discounts.
+                    💡 <strong className="text-foreground">Pricing Tip:</strong>
+                    {totalRooms > 0
+                        ? ` You have ${totalRooms} rooms. High demand days (orange/red) are optimal for surge pricing.`
+                        : ' Add rooms to see demand based on actual bookings.'
+                    }
                 </p>
             </div>
         </div>
