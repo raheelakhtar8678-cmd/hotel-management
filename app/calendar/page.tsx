@@ -1,4 +1,5 @@
 import InteractiveCalendar from "@/components/interactive-calendar";
+import { CalendarSyncWidget } from "@/components/calendar-sync-widget";
 
 export default function CalendarPage() {
     return (
@@ -13,7 +14,14 @@ export default function CalendarPage() {
                     </p>
                 </div>
 
-                <InteractiveCalendar />
+                <div className="grid lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                        <InteractiveCalendar />
+                    </div>
+                    <div>
+                        <CalendarSyncWidget />
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -263,7 +263,7 @@ export default function BookingsPage() {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        {booking.status === 'confirmed' && !booking.refund_amount && (
+                                        {booking.status === 'confirmed' && (!booking.refund_amount || Number(booking.refund_amount) === 0) && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -274,7 +274,7 @@ export default function BookingsPage() {
                                                 Refund
                                             </Button>
                                         )}
-                                        {(booking.status === 'refunded' || booking.refund_amount) && (
+                                        {(booking.status === 'refunded' || (booking.refund_amount && Number(booking.refund_amount) > 0)) && (
                                             <span className="text-xs text-muted-foreground">Refunded</span>
                                         )}
                                     </TableCell>

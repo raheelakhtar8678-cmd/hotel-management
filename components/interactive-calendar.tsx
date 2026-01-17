@@ -198,26 +198,30 @@ export default function InteractiveCalendar({ propertyId }: InteractiveCalendarP
                                                     {booking.status}
                                                 </Badge>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                            <div className="grid grid-cols-2 gap-4 text-sm bg-background/50 p-3 rounded-md">
                                                 <div>
-                                                    <span className="text-muted-foreground">Check-in:</span>
-                                                    <span className="ml-2">{format(checkIn, 'MMM d')}</span>
+                                                    <span className="text-muted-foreground block text-xs uppercase tracking-wider">Check-in</span>
+                                                    <span className="font-medium">{format(checkIn, 'EEE, MMM d, yyyy')}</span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-muted-foreground">Check-out:</span>
-                                                    <span className="ml-2">{format(checkOut, 'MMM d')}</span>
+                                                    <span className="text-muted-foreground block text-xs uppercase tracking-wider">Check-out</span>
+                                                    <span className="font-medium">{format(checkOut, 'EEE, MMM d, yyyy')}</span>
                                                 </div>
-                                                <div>
-                                                    <span className="text-muted-foreground">Per night:</span>
-                                                    <span className="ml-2 font-semibold text-emerald-600">
-                                                        ${pricePerNight.toFixed(2)}
-                                                    </span>
+                                                <div className="col-span-2 border-t pt-2 mt-1">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-muted-foreground">Avg. Nightly Rate (Room + Extras):</span>
+                                                        <span className="font-medium text-emerald-600">
+                                                            ${pricePerNight.toFixed(2)}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <span className="text-muted-foreground">Total:</span>
-                                                    <span className="ml-2 font-semibold">
-                                                        ${Number(booking.total_paid || 0).toFixed(2)}
-                                                    </span>
+                                                <div className="col-span-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-muted-foreground font-medium">Total Paid:</span>
+                                                        <span className="text-lg font-bold">
+                                                            ${Number(booking.total_paid || 0).toFixed(2)}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
