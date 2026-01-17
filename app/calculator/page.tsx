@@ -19,6 +19,8 @@ export default function CalculatorPage() {
     const [guestEmail, setGuestEmail] = useState('');
     const [extras, setExtras] = useState<any[]>([]);
     const [newExtra, setNewExtra] = useState({ name: '', price: '', quantity: 1 });
+    const [pricingRules, setPricingRules] = useState<any[]>([]);
+    const [appliedRules, setAppliedRules] = useState<any[]>([]);
 
     useEffect(() => {
         fetchData();
@@ -27,6 +29,9 @@ export default function CalculatorPage() {
     useEffect(() => {
         if (selectedProperty) {
             fetchRooms(selectedProperty);
+            fetchPricingRules(selectedProperty);
+        } else {
+            setPricingRules([]);
         }
     }, [selectedProperty]);
 
@@ -50,6 +55,16 @@ export default function CalculatorPage() {
         }
     };
 
+    const fetchPricingRules = async (propertyId: string) => {
+        try {
+            const res = await fetch(`/api/pricing-rules?property_id=${propertyId}&is_active=true`);
+            const data = await res.json();
+            setPricingRules(data.rules || []);
+        } catch (error) {
+            console.error('Error fetching rules:', error);
+        }
+    };
+
     const addExtra = () => {
         if (newExtra.name && newExtra.price) {
             setExtras([...extras, { ...newExtra, price: parseFloat(newExtra.price), id: Date.now() }]);
@@ -70,9 +85,76 @@ export default function CalculatorPage() {
     };
 
     const nights = calculateNights();
-    const roomTotal = selectedRoom ? (selectedRoom.current_price || 0) * nights : 0;
+    const baseRoomTotal = selectedRoom ? (selectedRoom.current_price || 0) * nights : 0;
+
+    // Evaluate Rules
+    let adjustmentsTotal = 0;
+    const activeAdjustments: any[] = [];
+
+    if (nights > 0 && baseRoomTotal > 0 && checkIn) {
+        const checkInDate = new Date(checkIn);
+        const today = new Date();
+        const daysUntilCheckIn = Math.ceil((checkInDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        pricingRules.forEach(rule => {
+            let applies = false;
+            const conditions = rule.conditions;
+
+            // Last Minute
+            if (rule.rule_type === 'last_minute' && conditions.days_before_checkin) {
+                if (daysUntilCheckIn <= conditions.days_before_checkin && daysUntilCheckIn >= 0) applies = true;
+            }
+
+            // Length of Stay
+            if (rule.rule_type === 'length_of_stay') {
+                if (conditions.min_length && nights >= conditions.min_length) applies = true;
+                if (conditions.max_length && nights > conditions.max_length) applies = false;
+            }
+
+            // Weekend (Simple check: if stay involves Friday(5) or Saturday(6))
+            if (rule.rule_type === 'weekend') {
+                // Check if any day in range is Fri/Sat
+                let current = new Date(checkInDate);
+                const end = new Date(checkOut);
+                while (current < end) {
+                    const day = current.getDay();
+                    if (day === 5 || day === 6) { applies = true; break; }
+                    current.setDate(current.getDate() + 1);
+                }
+            }
+
+            // Seasonal (Simple date check)
+            if (rule.rule_type === 'seasonal' && rule.date_from && rule.date_to) { // Fix: use rule root dates for ease or conditions
+                // Actually DB stores date_from/to in root, let's use that
+                const start = new Date(rule.date_from);
+                const end = new Date(rule.date_to);
+                if (checkInDate >= start && checkInDate <= end) applies = true;
+            }
+
+            // Apply
+            if (applies) {
+                const action = rule.action;
+                let amount = 0;
+                if (action.unit === 'percent') {
+                    // Calculate on BASE price
+                    amount = baseRoomTotal * (Number(action.value) / 100);
+                } else {
+                    amount = Number(action.value);
+                }
+
+                if (action.type === 'discount') {
+                    adjustmentsTotal -= amount;
+                    activeAdjustments.push({ name: rule.name, amount: -amount });
+                } else {
+                    adjustmentsTotal += amount;
+                    activeAdjustments.push({ name: rule.name, amount: amount });
+                }
+            }
+        });
+    }
+
     const extrasTotal = extras.reduce((sum, e) => sum + (e.price * e.quantity * nights), 0);
-    const subtotal = roomTotal + extrasTotal;
+    const subtotal = baseRoomTotal + adjustmentsTotal + extrasTotal;
     const tax = subtotal * 0.1; // 10% tax
     const total = subtotal + tax;
 
@@ -309,8 +391,16 @@ export default function CalculatorPage() {
                                         <div className="space-y-3 pb-4 border-b">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Room ({nights} nights)</span>
-                                                <span className="font-medium">${roomTotal.toFixed(2)}</span>
+                                                <span className="font-medium">${baseRoomTotal.toFixed(2)}</span>
                                             </div>
+
+                                            {/* Adjustments */}
+                                            {activeAdjustments.map((adj, idx) => (
+                                                <div key={idx} className="flex justify-between text-sm text-emerald-600">
+                                                    <span>{adj.name}</span>
+                                                    <span>{adj.amount > 0 ? '+' : ''}{adj.amount.toFixed(2)}</span>
+                                                </div>
+                                            ))}
                                             {extras.length > 0 && (
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-muted-foreground">Extras</span>

@@ -61,9 +61,12 @@ export default function StaffPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [saving, setSaving] = useState(false);
 
+    const [activeRole, setActiveRole] = useState('all');
+
     // Form State
     const [formData, setFormData] = useState({
         name: '',
+        role: 'reception',
         property_id: '',
         assigned_room_id: '',
         work_start_time: '',
@@ -140,6 +143,7 @@ export default function StaffPage() {
                 setIsDialogOpen(false);
                 setFormData({
                     name: '',
+                    role: 'reception',
                     property_id: '',
                     assigned_room_id: '',
                     work_start_time: '',
@@ -204,6 +208,26 @@ export default function StaffPage() {
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         placeholder="Jane Doe"
                                     />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="role">Role *</Label>
+                                    <Select
+                                        value={formData.role}
+                                        onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
+                                        required
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="reception">Reception</SelectItem>
+                                            <SelectItem value="cleaning">Cleaning</SelectItem>
+                                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                                            <SelectItem value="food_delivery">Food Delivery</SelectItem>
+                                            <SelectItem value="manager">Manager</SelectItem>
+                                            <SelectItem value="other">Other</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="property">Assigned Property *</Label>
@@ -317,17 +341,37 @@ export default function StaffPage() {
                 </Dialog>
             </div>
 
+            {/* Role Filters */}
+            <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
+                {['all', 'cleaning', 'maintenance', 'food_delivery', 'reception', 'manager'].map((role) => (
+                    <Button
+                        key={role}
+                        variant={activeRole === role ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setActiveRole(role)}
+                        className={`capitalize ${activeRole === role ? 'bg-gradient-primary border-0' : ''}`}
+                    >
+                        {role.replace('_', ' ')}
+                    </Button>
+                ))}
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {staffList.map((staff) => (
+                {staffList.filter(s => activeRole === 'all' || s.role === activeRole).map((staff) => (
                     <Card key={staff.id} className="glass-card">
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                             <CardTitle className="text-lg font-semibold flex items-center gap-2">
                                 <Users className="h-4 w-4 text-primary" />
                                 {staff.name}
                             </CardTitle>
-                            <Badge variant={staff.status === 'active' ? 'default' : 'secondary'}>
-                                {staff.status}
-                            </Badge>
+                            <div className="flex flex-col items-end">
+                                <Badge variant="outline" className="text-xs mb-1 capitalize border-primary/20">
+                                    {staff.role?.replace('_', ' ') || 'Staff'}
+                                </Badge>
+                                <Badge variant={staff.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
+                                    {staff.status}
+                                </Badge>
+                            </div>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-4">
                             {/* Assignment */}

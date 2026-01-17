@@ -41,6 +41,7 @@ export async function POST(request: Request) {
         const body = await request.json();
         const {
             name,
+            role,
             property_id,
             assigned_room_id,
             work_start_time,
@@ -58,9 +59,10 @@ export async function POST(request: Request) {
             );
         }
 
-        const { rows } = await sql`
+        const { rows: inserted } = await sql`
             INSERT INTO staff (
                 name,
+                role,
                 property_id,
                 assigned_room_id,
                 work_start_time,
@@ -72,6 +74,7 @@ export async function POST(request: Request) {
                 status
             ) VALUES (
                 ${name},
+                ${role || 'Staff'},
                 ${property_id},
                 ${assigned_room_id || null},
                 ${work_start_time || null},
@@ -81,7 +84,18 @@ export async function POST(request: Request) {
                 ${emergency_contact_name || null},
                 ${emergency_contact_phone || null},
                 'active'
-            ) RETURNING *
+            ) RETURNING id
+        `;
+
+        const newId = inserted[0].id;
+
+        // Fetch full object with joins
+        const { rows } = await sql`
+            SELECT s.*, p.name as property_name, r.type as room_type, r.name as room_name
+            FROM staff s
+            LEFT JOIN properties p ON s.property_id = p.id
+            LEFT JOIN rooms r ON s.assigned_room_id = r.id
+            WHERE s.id = ${newId}
         `;
 
         return NextResponse.json({ success: true, staff: rows[0] });

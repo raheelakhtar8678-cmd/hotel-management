@@ -54,6 +54,30 @@ const RULE_TEMPLATES = {
         conditions: { season: 'high', surge_percent: 30 },
         action: { type: 'surge', value: 30, unit: 'percent' }
     },
+    low_season: {
+        ruleType: 'seasonal',
+        name: 'Low Season Discount',
+        conditions: { season: 'low', discount_percent: 15 },
+        action: { type: 'discount', value: 15, unit: 'percent' }
+    },
+    event_surge: {
+        ruleType: 'event_based',
+        name: 'Event Surge Pricing',
+        conditions: { event: 'major', surge_percent: 40 },
+        action: { type: 'surge', value: 40, unit: 'percent' }
+    },
+    gap_night: {
+        ruleType: 'gap_night',
+        name: 'Gap Night Auto-Fill',
+        conditions: { gap_nights: 1, discount_percent: 30 },
+        action: { type: 'discount', value: 30, unit: 'percent' }
+    },
+    orphan_day: {
+        ruleType: 'orphan_day',
+        name: 'Orphan Day Protection',
+        conditions: { min_length: 2 },
+        action: { type: 'surge', value: 0, unit: 'percent' } // Logic rule, mostly restriction
+    },
 };
 
 import { Suspense } from 'react';

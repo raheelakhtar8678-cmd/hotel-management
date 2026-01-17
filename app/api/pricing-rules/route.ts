@@ -3,15 +3,31 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// GET: Fetch all pricing rules
-export async function GET() {
+// GET: Fetch all pricing rules with optional filtering
+export async function GET(request: Request) {
     try {
-        const { rows } = await sql`
+        const { searchParams } = new URL(request.url);
+        const property_id = searchParams.get('property_id');
+        const is_active = searchParams.get('is_active');
+
+        let query = `
             SELECT pr.*, p.name as property_name
             FROM pricing_rules pr
             LEFT JOIN properties p ON pr.property_id = p.id
-            ORDER BY pr.priority DESC
         `;
+
+        // Build WHERE clause
+        const conditions = [];
+        if (property_id) conditions.push(`pr.property_id = '${property_id}'`);
+        if (is_active === 'true') conditions.push(`pr.is_active = true`);
+
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(' AND ')}`;
+        }
+
+        query += ` ORDER BY pr.priority DESC`;
+
+        const { rows } = await sql.query(query);
 
         return NextResponse.json({
             success: true,
