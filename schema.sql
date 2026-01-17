@@ -46,8 +46,11 @@ create table if not exists bookings (
   check_out date not null,
   guests int default 1,
   total_paid numeric not null,
-  status text check (status in ('confirmed', 'cancelled')) default 'confirmed',
+  status text check (status in ('confirmed', 'cancelled', 'refunded')) default 'confirmed',
   channel text check (channel in ('booking_com', 'expedia', 'airbnb', 'direct', 'other')) default 'direct',
+  refund_amount numeric default 0,
+  refund_reason text,
+  refunded_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

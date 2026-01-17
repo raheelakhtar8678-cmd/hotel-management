@@ -197,9 +197,10 @@ export default function CalculatorPage() {
                                         id="room"
                                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                                         disabled={!selectedProperty}
+                                        value={selectedRoom?.id || ''}
                                         onChange={(e) => {
                                             const room = rooms.find(r => r.id === e.target.value);
-                                            setSelectedRoom(room);
+                                            setSelectedRoom(room || null);
                                         }}
                                     >
                                         <option value="">Select room...</option>

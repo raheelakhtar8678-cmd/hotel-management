@@ -107,3 +107,58 @@ export async function POST(request: Request) {
         );
     }
 }
+
+// PATCH: Process refund for a booking
+export async function PATCH(request: Request) {
+    try {
+        const body = await request.json();
+        const { booking_id, refund_amount, refund_reason } = body;
+
+        if (!booking_id || refund_amount === undefined) {
+            return NextResponse.json(
+                { success: false, error: 'Booking ID and refund amount are required' },
+                { status: 400 }
+            );
+        }
+
+        // Get the booking first
+        const { rows: existingBooking } = await sql`
+            SELECT * FROM bookings WHERE id = ${booking_id} LIMIT 1
+        `;
+
+        if (!existingBooking[0]) {
+            return NextResponse.json(
+                { success: false, error: 'Booking not found' },
+                { status: 404 }
+            );
+        }
+
+        // Update booking with refund info
+        const { rows } = await sql`
+            UPDATE bookings 
+            SET refund_amount = ${refund_amount},
+                refund_reason = ${refund_reason || null},
+                refunded_at = NOW(),
+                status = 'refunded'
+            WHERE id = ${booking_id}
+            RETURNING *
+        `;
+
+        const booking = rows[0];
+
+        // Set room back to available
+        await sql`UPDATE rooms SET status = 'available' WHERE id = ${booking.room_id}`;
+
+        return NextResponse.json({
+            success: true,
+            booking,
+            message: `Refund of $${refund_amount} processed successfully`
+        });
+    } catch (error) {
+        console.error('Error processing refund:', error);
+        return NextResponse.json(
+            { success: false, error: 'Failed to process refund' },
+            { status: 500 }
+        );
+    }
+}

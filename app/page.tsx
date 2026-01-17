@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { sql } from '@vercel/postgres';
-import { DollarSign, TrendingUp, Users, Calendar } from "lucide-react";
+import { DollarSign, TrendingUp, Users, Calendar, RotateCcw } from "lucide-react";
 import { RevenuePaceChart } from "@/components/charts/revenue-pace-chart";
 import { DemandHeatmap } from "@/components/charts/demand-heatmap";
 import { ChannelHealthChart } from "@/components/charts/channel-health-chart";
@@ -17,6 +17,9 @@ export default async function Dashboard() {
   let occupiedCount = 0;
   let totalRoomCount = 0;
   let liftVal = 0;
+  let totalRefunds = 0;
+  let refundCount = 0;
+  let netRevenue = 0;
 
   try {
     // Fetch bookings using Vercel Postgres
@@ -29,7 +32,18 @@ export default async function Dashboard() {
     const { rows: properties } = await sql`SELECT id, base_price FROM properties`;
     const { rows: rooms } = await sql`SELECT id, property_id FROM rooms`;
 
+    // Fetch refund data
+    const { rows: refundData } = await sql`
+      SELECT COALESCE(SUM(refund_amount), 0) as total_refunds,
+             COUNT(CASE WHEN refund_amount > 0 THEN 1 END) as refund_count
+      FROM bookings 
+      WHERE refund_amount > 0
+    `;
+    totalRefunds = Number(refundData[0]?.total_refunds) || 0;
+    refundCount = Number(refundData[0]?.refund_count) || 0;
+
     totalRevenue = bookings.reduce((acc: number, b: any) => acc + (Number(b.total_paid) || 0), 0);
+    netRevenue = totalRevenue - totalRefunds;
 
     let baseRevenue = 0;
     if (bookings && rooms && properties) {
@@ -62,6 +76,9 @@ export default async function Dashboard() {
     occupancyRate = "78";
     occupiedCount = 42;
     totalRoomCount = 54;
+    totalRefunds = 2500;
+    refundCount = 3;
+    netRevenue = totalRevenue - totalRefunds;
   }
 
   return (
@@ -77,15 +94,26 @@ export default async function Dashboard() {
         {/* Main Content Area - 70% */}
         <div className="space-y-6">
           {/* KPI Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <Card className="glass-card hover-glow transition-smooth">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">Net Revenue</CardTitle>
                 <DollarSign className="h-5 w-5 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
-                <p className="text-xs text-emerald-500">+20.1% from last month</p>
+                <div className="text-2xl font-bold">${netRevenue.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">After {refundCount} refunds</p>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card hover-glow transition-smooth">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Refunds</CardTitle>
+                <RotateCcw className="h-5 w-5 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-500">-${totalRefunds.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">{refundCount} booking{refundCount !== 1 ? 's' : ''} refunded</p>
               </CardContent>
             </Card>
 
