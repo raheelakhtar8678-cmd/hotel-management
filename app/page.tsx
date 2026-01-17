@@ -9,7 +9,13 @@ import { RecentActivityWidget } from "@/components/recent-activity-widget";
 
 export const revalidate = 0; // Disable cache for real-time data
 
+import { cookies } from 'next/headers';
+
 export default async function Dashboard() {
+  const cookieStore = await cookies();
+  const propertyId = cookieStore.get('yieldvibe_property_id')?.value;
+  const isFiltered = propertyId && propertyId !== 'all';
+
   let totalRevenue = 0;
   let revenueLift = 0;
   let liftPercentage = "0.0";
@@ -22,23 +28,56 @@ export default async function Dashboard() {
   let netRevenue = 0;
 
   try {
-    // Fetch bookings using Vercel Postgres
-    const { rows: bookings } = await sql`
-      SELECT total_paid, check_in, check_out, room_id 
-      FROM bookings 
-      WHERE status = 'confirmed'
-    `;
+    // 1. Fetch Bookings (Filtered)
+    let bookingsQuery;
+    if (isFiltered) {
+      bookingsQuery = sql`
+            SELECT b.total_paid, b.check_in, b.check_out, b.room_id 
+            FROM bookings b
+            JOIN rooms r ON b.room_id = r.id
+            WHERE b.status = 'confirmed' AND r.property_id = ${propertyId}
+        `;
+    } else {
+      bookingsQuery = sql`
+            SELECT total_paid, check_in, check_out, room_id 
+            FROM bookings 
+            WHERE status = 'confirmed'
+        `;
+    }
+    const { rows: bookings } = await bookingsQuery;
 
+    // 2. Fetch Rooms (Filtered)
+    let roomsQuery;
+    if (isFiltered) {
+      roomsQuery = sql`SELECT id, property_id FROM rooms WHERE property_id = ${propertyId}`;
+    } else {
+      roomsQuery = sql`SELECT id, property_id FROM rooms`;
+    }
+    const { rows: rooms } = await roomsQuery;
+
+    // 3. Fetch Properties
     const { rows: properties } = await sql`SELECT id, base_price FROM properties`;
-    const { rows: rooms } = await sql`SELECT id, property_id FROM rooms`;
 
-    // Fetch refund data
-    const { rows: refundData } = await sql`
-      SELECT COALESCE(SUM(refund_amount), 0) as total_refunds,
-             COUNT(CASE WHEN refund_amount > 0 THEN 1 END) as refund_count
-      FROM bookings 
-      WHERE refund_amount > 0
-    `;
+    // 4. Fetch Refunds (Filtered)
+    let refundQuery;
+    if (isFiltered) {
+      refundQuery = sql`
+            SELECT COALESCE(SUM(b.refund_amount), 0) as total_refunds,
+                   COUNT(CASE WHEN b.refund_amount > 0 THEN 1 END) as refund_count
+            FROM bookings b
+            JOIN rooms r ON b.room_id = r.id
+            WHERE b.refund_amount > 0 AND r.property_id = ${propertyId}
+        `;
+    } else {
+      refundQuery = sql`
+            SELECT COALESCE(SUM(refund_amount), 0) as total_refunds,
+                   COUNT(CASE WHEN refund_amount > 0 THEN 1 END) as refund_count
+            FROM bookings 
+            WHERE refund_amount > 0
+        `;
+    }
+    const { rows: refundData } = await refundQuery;
+
     totalRefunds = Number(refundData[0]?.total_refunds) || 0;
     refundCount = Number(refundData[0]?.refund_count) || 0;
 
@@ -48,7 +87,11 @@ export default async function Dashboard() {
     let baseRevenue = 0;
     if (bookings && rooms && properties) {
       for (const booking of bookings) {
+        // Room logic
         const room = rooms.find((r: any) => r.id === booking.room_id);
+        // If room not found (e.g. data mismatch), skip
+        if (!room) continue;
+
         const property = properties.find((p: any) => p.id === room?.property_id);
         if (property) {
           const start = new Date(booking.check_in);
@@ -166,7 +209,7 @@ export default async function Dashboard() {
               </p>
             </CardHeader>
             <CardContent>
-              <RevenuePaceChart />
+              <RevenuePaceChart propertyId={propertyId} />
             </CardContent>
           </Card>
 

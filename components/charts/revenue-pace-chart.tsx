@@ -15,15 +15,19 @@ interface ChartData {
     lastYear: number;
 }
 
-export function RevenuePaceChart() {
+interface RevenuePaceChartProps {
+    propertyId?: string;
+}
+
+export function RevenuePaceChart({ propertyId }: RevenuePaceChartProps) {
     const [chartData, setChartData] = useState<ChartData[]>([]);
     const [loading, setLoading] = useState(true);
-    const [viewType, setViewType] = useState<ViewType>('yearly');
+    const [viewType, setViewType] = useState<ViewType>('daily');
     const [bookings, setBookings] = useState<any[]>([]);
 
     useEffect(() => {
-        fetchRevenueData();
-    }, []);
+        fetchData();
+    }, [propertyId]); // Re-fetch when property changes
 
     useEffect(() => {
         if (bookings.length > 0) {
@@ -31,13 +35,18 @@ export function RevenuePaceChart() {
         }
     }, [viewType, bookings]);
 
-    const fetchRevenueData = async () => {
+    const fetchData = async () => {
         try {
-            const res = await fetch('/api/bookings');
-            if (res.ok) {
-                const data = await res.json();
-                setBookings(data.bookings || []);
-                processDataForView('yearly', data.bookings || []);
+            setLoading(true);
+            const url = propertyId && propertyId !== 'all'
+                ? `/api/bookings?property_id=${propertyId}`
+                : '/api/bookings';
+
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.success) {
+                setBookings(data.bookings);
+                processDataForView(viewType, data.bookings);
             }
         } catch (error) {
             console.error('Error fetching revenue data:', error);

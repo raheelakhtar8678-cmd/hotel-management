@@ -27,7 +27,10 @@ interface PropertySelectorProps {
     onPropertyChange?: (propertyId: string) => void;
 }
 
+import { useRouter } from "next/navigation";
+
 export function PropertySelector({ currentPropertyId, onPropertyChange }: PropertySelectorProps) {
+    const router = useRouter();
     const [properties, setProperties] = useState<Property[]>([]);
     const [selectedId, setSelectedId] = useState<string>(currentPropertyId || "all");
     const [loading, setLoading] = useState(true);
@@ -35,6 +38,11 @@ export function PropertySelector({ currentPropertyId, onPropertyChange }: Proper
 
     useEffect(() => {
         fetchProperties();
+        // Sync state from cookie on mount if available
+        const match = document.cookie.match(new RegExp('(^| )yieldvibe_property_id=([^;]+)'));
+        if (match && !currentPropertyId) {
+            setSelectedId(match[2]);
+        }
     }, []);
 
     const fetchProperties = async () => {
@@ -62,10 +70,12 @@ export function PropertySelector({ currentPropertyId, onPropertyChange }: Proper
     const handleChange = (value: string) => {
         setSelectedId(value);
         onPropertyChange?.(value);
-        // Store preference in localStorage
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('yieldvibe_selected_property', value);
-        }
+
+        // Store in Cookie for Server Components
+        document.cookie = `yieldvibe_property_id=${value}; path=/; max-age=31536000`; // 1 year
+
+        // Refresh server components
+        router.refresh();
     };
 
     const handleAddProperty = async (formData: FormData) => {

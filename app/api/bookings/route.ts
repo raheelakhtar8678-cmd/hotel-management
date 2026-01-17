@@ -34,14 +34,30 @@ export async function GET(request: Request) {
                 bookings: rows || []
             });
         } else {
-            // Fetch all bookings
-            const { rows } = await sql`
-                SELECT b.*, r.type as room_type, r.property_id, p.name as property_name
-                FROM bookings b
-                JOIN rooms r ON b.room_id = r.id
-                JOIN properties p ON r.property_id = p.id
-                ORDER BY b.created_at DESC
-            `;
+            // Fetch all bookings (optionally filtered by property)
+            const property_id = searchParams.get('property_id');
+            let query;
+
+            if (property_id && property_id !== 'all') {
+                query = sql`
+                    SELECT b.*, r.type as room_type, r.property_id, p.name as property_name
+                    FROM bookings b
+                    JOIN rooms r ON b.room_id = r.id
+                    JOIN properties p ON r.property_id = p.id
+                    WHERE r.property_id = ${property_id}
+                    ORDER BY b.created_at DESC
+                `;
+            } else {
+                query = sql`
+                    SELECT b.*, r.type as room_type, r.property_id, p.name as property_name
+                    FROM bookings b
+                    JOIN rooms r ON b.room_id = r.id
+                    JOIN properties p ON r.property_id = p.id
+                    ORDER BY b.created_at DESC
+                `;
+            }
+
+            const { rows } = await query;
             return NextResponse.json({
                 success: true,
                 bookings: rows || []
