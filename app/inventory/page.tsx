@@ -361,9 +361,42 @@ export default function InventoryPage() {
                                     <TableCell>{property?.name}</TableCell>
                                     <TableCell>{room.type || 'Unknown'}</TableCell>
                                     <TableCell>
-                                        <Badge variant={room.status === 'available' ? 'default' : 'secondary'}>
-                                            {room.status || 'unknown'}
-                                        </Badge>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Badge
+                                                    variant={room.status === 'available' ? 'default' : room.status === 'occupied' ? 'secondary' : 'outline'}
+                                                    className={`cursor-pointer hover:opacity-80 ${room.status === 'available' ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30' :
+                                                            room.status === 'occupied' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
+                                                                'bg-blue-500/20 text-blue-500 border-blue-500/30'
+                                                        }`}
+                                                >
+                                                    {room.status || 'unknown'}
+                                                </Badge>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem
+                                                    onClick={() => updateRoomStatus(room.id, 'available')}
+                                                    disabled={room.status === 'available'}
+                                                >
+                                                    <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-500" />
+                                                    Available
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => updateRoomStatus(room.id, 'occupied')}
+                                                    disabled={room.status === 'occupied'}
+                                                >
+                                                    <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                                                    Occupied
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => updateRoomStatus(room.id, 'maintenance')}
+                                                    disabled={room.status === 'maintenance'}
+                                                >
+                                                    <Wrench className="h-4 w-4 mr-2 text-blue-500" />
+                                                    Maintenance
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </TableCell>
                                     <TableCell>${Number(room.current_price ?? property?.base_price).toFixed(2)}</TableCell>
                                     <TableCell>

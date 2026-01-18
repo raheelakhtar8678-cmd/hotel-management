@@ -44,6 +44,7 @@ export default function AddRoomPage() {
         const roomType = formData.get('room_type') as string;
         const status = formData.get('status') as string;
         const name = formData.get('name') as string;
+        const price = formData.get('price') as string;
 
         try {
             const response = await fetch('/api/rooms', {
@@ -53,7 +54,8 @@ export default function AddRoomPage() {
                     property_id: propertyId,
                     type: roomType,
                     status: status,
-                    name: name
+                    name: name,
+                    current_price: parseFloat(price) || 100
                 }),
             });
 
@@ -155,12 +157,31 @@ export default function AddRoomPage() {
                                 </Select>
                             </div>
 
-                            <div className="bg-secondary/30 rounded-lg p-4 text-sm">
-                                <p className="font-medium mb-2">💡 Note:</p>
-                                <p className="text-muted-foreground">
-                                    The room will inherit the base price from the selected property.
-                                    You can adjust individual room prices later in the inventory view.
+                            <div className="space-y-2">
+                                <Label htmlFor="price">Price per Night ($) *</Label>
+                                <Input
+                                    id="price"
+                                    name="price"
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="e.g., 150.00"
+                                    required
+                                    className="bg-input border-primary/20"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Set the nightly rate for this room. Deluxe/Suite rooms should have higher prices.
                                 </p>
+                            </div>
+
+                            <div className="bg-secondary/30 rounded-lg p-4 text-sm">
+                                <p className="font-medium mb-2">💡 Suggested Pricing:</p>
+                                <ul className="text-muted-foreground space-y-1">
+                                    <li>Standard: Base property price</li>
+                                    <li>Deluxe: +20-30% above base</li>
+                                    <li>Suite: +50-100% above base</li>
+                                    <li>Executive: +100%+ above base</li>
+                                </ul>
                             </div>
 
                             <Button

@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { property_id, type, status, name } = body;
+        const { property_id, type, status, name, current_price } = body;
 
         if (!property_id) {
             return NextResponse.json(
@@ -52,11 +52,14 @@ export async function POST(request: Request) {
             );
         }
 
-        // Get property to inherit base price
+        // Get property to inherit base price if custom price not provided
         const { rows: propertyRows } = await sql`
             SELECT base_price FROM properties WHERE id = ${property_id} LIMIT 1
         `;
         const property = propertyRows[0];
+
+        // Use provided price, or fall back to property base price
+        const finalPrice = current_price || property?.base_price || 100;
 
         const { rows } = await sql`
             INSERT INTO rooms (
@@ -65,7 +68,7 @@ export async function POST(request: Request) {
                 ${property_id},
                 ${type || 'Standard'},
                 ${status || 'available'},
-                ${property?.base_price || 100},
+                ${finalPrice},
                 'Initial setup',
                 ${name || ('Room ' + Date.now().toString().slice(-4))}
             )
