@@ -1,4 +1,4 @@
-import { adminClient } from '@/lib/supabase/admin';
+import { sql } from '@vercel/postgres';
 
 interface PricingRule {
     id: string;
@@ -26,7 +26,7 @@ interface Room {
 
 /**
  * Pricing Rule Execution Engine
- * Applies active pricing rules to rooms and calculates adjusted prices
+ * Uses Vercel Postgres for database queries
  */
 export class PricingEngine {
 
@@ -40,50 +40,53 @@ export class PricingEngine {
         evaluatedRulesCount?: number;
     }> {
         try {
+            console.log(`[PricingEngine] Executing rules for property: ${propertyId}`);
+
             // Fetch active rules for this property, ordered by priority
-            const { data: rules, error: rulesError } = await adminClient
-                .from('pricing_rules')
-                .select('*')
-                .eq('property_id', propertyId)
-                .eq('is_active', true)
-                .order('priority', { ascending: false });
+            const { rows: rules } = await sql`
+                SELECT * FROM pricing_rules 
+                WHERE property_id = ${propertyId} 
+                AND is_active = true 
+                ORDER BY priority DESC
+            `;
 
-            if (rulesError) throw rulesError;
+            console.log(`[PricingEngine] Found ${rules.length} active rules`);
 
-            // Fetch rooms for this property
-            const { data: rooms, error: roomsError } = await adminClient
-                .from('rooms')
-                .select('*')
-                .eq('property_id', propertyId)
-                .eq('status', 'available');
+            // Fetch AVAILABLE rooms for this property only
+            const { rows: rooms } = await sql`
+                SELECT * FROM rooms 
+                WHERE property_id = ${propertyId} 
+                AND status = 'available'
+            `;
 
-            if (roomsError) throw roomsError;
+            console.log(`[PricingEngine] Found ${rooms.length} available rooms`);
 
             // Fetch property base price
-            const { data: property, error: propertyError } = await adminClient
-                .from('properties')
-                .select('base_price')
-                .eq('id', propertyId)
-                .single();
+            const { rows: propertyRows } = await sql`
+                SELECT base_price FROM properties WHERE id = ${propertyId} LIMIT 1
+            `;
 
-            if (propertyError) throw propertyError;
+            if (propertyRows.length === 0) {
+                console.log(`[PricingEngine] Property ${propertyId} not found`);
+                return { success: false, updatedRooms: 0, appliedRules: [] };
+            }
 
-            const basePrice = property.base_price || 100;
+            const basePrice = Number(propertyRows[0].base_price) || 100;
             const appliedRuleNames: string[] = [];
             let updatedCount = 0;
 
             // Process each room
-            for (const room of rooms || []) {
+            for (const room of rooms) {
                 let finalPrice = basePrice;
-                let appliedRules: string[] = [];
+                let appliedRulesForRoom: string[] = [];
 
                 // Apply rules in priority order
-                for (const rule of rules || []) {
-                    const adjustment = this.evaluateRule(rule, room, basePrice);
+                for (const rule of rules) {
+                    const adjustment = this.evaluateRule(rule as PricingRule, room as Room, basePrice);
 
                     if (adjustment !== null) {
                         finalPrice = adjustment;
-                        appliedRules.push(rule.name);
+                        appliedRulesForRoom.push(rule.name);
 
                         if (!appliedRuleNames.includes(rule.name)) {
                             appliedRuleNames.push(rule.name);
@@ -92,18 +95,20 @@ export class PricingEngine {
                 }
 
                 // Update room price if changed
-                if (finalPrice !== room.current_price) {
-                    await adminClient
-                        .from('rooms')
-                        .update({
-                            current_price: Math.round(finalPrice),
-                            last_logic_reason: appliedRules.length > 0
-                                ? `Rules applied: ${appliedRules.join(', ')}`
-                                : 'Base price (no rules matched)'
-                        })
-                        .eq('id', room.id);
+                if (Math.round(finalPrice) !== Number(room.current_price)) {
+                    const logicReason = appliedRulesForRoom.length > 0
+                        ? `Rules applied: ${appliedRulesForRoom.join(', ')}`
+                        : 'Base price (no rules matched)';
+
+                    await sql`
+                        UPDATE rooms 
+                        SET current_price = ${Math.round(finalPrice)},
+                            last_logic_reason = ${logicReason}
+                        WHERE id = ${room.id}
+                    `;
 
                     updatedCount++;
+                    console.log(`[PricingEngine] Updated room ${room.id}: $${room.current_price} -> $${Math.round(finalPrice)}`);
                 }
             }
 
@@ -111,11 +116,11 @@ export class PricingEngine {
                 success: true,
                 updatedRooms: updatedCount,
                 appliedRules: appliedRuleNames,
-                evaluatedRulesCount: rules?.length || 0
+                evaluatedRulesCount: rules.length
             };
 
         } catch (error) {
-            console.error('Error executing pricing rules:', error);
+            console.error('[PricingEngine] Error executing pricing rules:', error);
             return {
                 success: false,
                 updatedRooms: 0,
@@ -136,8 +141,6 @@ export class PricingEngine {
         const conditions = rule.conditions || {};
         const action = rule.action || {};
 
-        console.log(`Evaluating rule ${rule.name} (ID: ${rule.id}) for room ${room.id}`);
-
         // Check date range if specified
         if (rule.date_from && rule.date_to) {
             const from = new Date(rule.date_from);
@@ -146,10 +149,7 @@ export class PricingEngine {
             const to = new Date(rule.date_to);
             to.setHours(23, 59, 59, 999); // Include the entire end date
 
-            console.log(`  Date check: Today ${today.toISOString()} vs Range ${from.toISOString()} - ${to.toISOString()}`);
-
             if (today < from || today > to) {
-                console.log('  -> Failed date range');
                 return null; // Outside date range
             }
         }
@@ -158,7 +158,6 @@ export class PricingEngine {
         if (rule.days_of_week && rule.days_of_week.length > 0) {
             const dayOfWeek = today.getDay();
             if (!rule.days_of_week.includes(dayOfWeek)) {
-                console.log(`  -> Failed day of week: Today ${dayOfWeek} vs Allowed [${rule.days_of_week.join(',')}]`);
                 return null; // Wrong day of week
             }
         }
@@ -166,31 +165,24 @@ export class PricingEngine {
         // Apply rule based on type
         switch (rule.rule_type) {
             case 'last_minute':
-                // Last-minute rules always apply (would need booking date to be more specific)
                 return this.applyAction(basePrice, action);
 
             case 'length_of_stay':
-                // Length of stay rules always apply (would need booking details)
                 return this.applyAction(basePrice, action);
 
             case 'weekend':
-                // Weekend rules check day of week (already checked above)
                 return this.applyAction(basePrice, action);
 
             case 'seasonal':
-                // Seasonal rules check date range (already checked above)
                 return this.applyAction(basePrice, action);
 
             case 'gap_night':
-                // Gap night detection would require calendar analysis
-                // For now, apply to available rooms
                 if (room.status === 'available') {
                     return this.applyAction(basePrice, action);
                 }
                 return null;
 
             case 'event_based':
-                // Event-based rules check date range
                 return this.applyAction(basePrice, action);
 
             default:
@@ -223,15 +215,13 @@ export class PricingEngine {
         totalUpdated: number;
     }> {
         try {
-            const { data: properties } = await adminClient
-                .from('properties')
-                .select('id');
+            const { rows: properties } = await sql`SELECT id FROM properties`;
 
-            console.log(`[PricingEngine] Found ${properties?.length || 0} properties to process`);
+            console.log(`[PricingEngine] Found ${properties.length} properties to process`);
 
             let totalUpdated = 0;
 
-            for (const property of properties || []) {
+            for (const property of properties) {
                 const result = await this.executeRulesForProperty(property.id);
                 if (result.success) {
                     totalUpdated += result.updatedRooms;
@@ -240,12 +230,12 @@ export class PricingEngine {
 
             return {
                 success: true,
-                propertiesProcessed: properties?.length || 0,
+                propertiesProcessed: properties.length,
                 totalUpdated
             };
 
         } catch (error) {
-            console.error('Error executing all rules:', error);
+            console.error('[PricingEngine] Error executing all rules:', error);
             return {
                 success: false,
                 propertiesProcessed: 0,
