@@ -54,7 +54,8 @@ export class PricingEngine {
             const { data: rooms, error: roomsError } = await adminClient
                 .from('rooms')
                 .select('*')
-                .eq('property_id', propertyId);
+                .eq('property_id', propertyId)
+                .eq('status', 'available');
 
             if (roomsError) throw roomsError;
 
@@ -225,6 +226,8 @@ export class PricingEngine {
             const { data: properties } = await adminClient
                 .from('properties')
                 .select('id');
+
+            console.log(`[PricingEngine] Found ${properties?.length || 0} properties to process`);
 
             let totalUpdated = 0;
 
