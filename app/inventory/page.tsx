@@ -21,8 +21,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-import { Plus, Package, X, RefreshCw, Settings, Calendar, Link as LinkIcon } from "lucide-react";
+import { Plus, Package, X, RefreshCw, Settings, Calendar, Link as LinkIcon, Trash2, MoreVertical, CheckCircle2, Clock, Wrench } from "lucide-react";
 import Link from "next/link";
 
 export default function InventoryPage() {
@@ -80,6 +87,48 @@ export default function InventoryPage() {
             console.error('Error fetching data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const deleteRoom = async (roomId: string) => {
+        if (!confirm('Are you sure you want to delete this room? This will also delete all extras for this room.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/rooms?id=${roomId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // Refresh data
+                fetchData();
+            } else {
+                alert('Failed to delete room');
+            }
+        } catch (error) {
+            console.error('Error deleting room:', error);
+            alert('Error deleting room');
+        }
+    };
+
+    const updateRoomStatus = async (roomId: string, newStatus: string) => {
+        try {
+            const response = await fetch('/api/rooms', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: roomId, status: newStatus })
+            });
+
+            if (response.ok) {
+                // Refresh data
+                fetchData();
+            } else {
+                alert('Failed to update room status');
+            }
+        } catch (error) {
+            console.error('Error updating room status:', error);
+            alert('Error updating room status');
         }
     };
 
@@ -358,28 +407,67 @@ export default function InventoryPage() {
                                         ${total.toFixed(2)}
                                     </TableCell>
                                     <TableCell>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                                setSelectedRoom(room);
-                                                setShowExtrasDialog(true);
-                                            }}
-                                        >
-                                            Extras
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 ml-1"
-                                            onClick={() => {
-                                                setSelectedRoom(room);
-                                                setIcalUrl(room.ical_url || '');
-                                                setShowSettingsDialog(true);
-                                            }}
-                                        >
-                                            <Settings className="h-4 w-4" />
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setSelectedRoom(room);
+                                                    setShowExtrasDialog(true);
+                                                }}
+                                            >
+                                                Extras
+                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        onClick={() => updateRoomStatus(room.id, 'available')}
+                                                        disabled={room.status === 'available'}
+                                                    >
+                                                        <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-500" />
+                                                        Set Available
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => updateRoomStatus(room.id, 'occupied')}
+                                                        disabled={room.status === 'occupied'}
+                                                    >
+                                                        <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                                                        Set Occupied
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => updateRoomStatus(room.id, 'maintenance')}
+                                                        disabled={room.status === 'maintenance'}
+                                                    >
+                                                        <Wrench className="h-4 w-4 mr-2 text-blue-500" />
+                                                        Set Maintenance
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setSelectedRoom(room);
+                                                            setIcalUrl(room.ical_url || '');
+                                                            setShowSettingsDialog(true);
+                                                        }}
+                                                    >
+                                                        <Settings className="h-4 w-4 mr-2" />
+                                                        iCal Settings
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => deleteRoom(room.id)}
+                                                        className="text-red-500 focus:text-red-500"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                        Delete Room
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             );

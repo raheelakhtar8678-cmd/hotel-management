@@ -86,3 +86,82 @@ export async function POST(request: Request) {
         );
     }
 }
+
+// DELETE: Delete a room by ID
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'Room ID is required' },
+                { status: 400 }
+            );
+        }
+
+        // First delete any extras associated with this room
+        await sql`DELETE FROM room_extras WHERE room_id = ${id}`;
+
+        // Then delete the room
+        await sql`DELETE FROM rooms WHERE id = ${id}`;
+
+        return NextResponse.json({
+            success: true,
+            message: 'Room deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting room:', error);
+        return NextResponse.json(
+            { success: false, error: 'Failed to delete room' },
+            { status: 500 }
+        );
+    }
+}
+
+// PATCH: Update room status
+export async function PATCH(request: Request) {
+    try {
+        const body = await request.json();
+        const { id, status } = body;
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: 'Room ID is required' },
+                { status: 400 }
+            );
+        }
+
+        if (!status) {
+            return NextResponse.json(
+                { success: false, error: 'Status is required' },
+                { status: 400 }
+            );
+        }
+
+        const { rows } = await sql`
+            UPDATE rooms 
+            SET status = ${status}
+            WHERE id = ${id}
+            RETURNING *
+        `;
+
+        if (rows.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Room not found' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            room: rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating room status:', error);
+        return NextResponse.json(
+            { success: false, error: 'Failed to update room status' },
+            { status: 500 }
+        );
+    }
+}
