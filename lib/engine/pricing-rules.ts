@@ -128,16 +128,27 @@ export class PricingEngine {
      * Returns the adjusted price or null if rule doesn't apply
      */
     private static evaluateRule(rule: PricingRule, room: Room, basePrice: number): number | null {
+        // Normalize today to midnight for date comparisons
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         const conditions = rule.conditions || {};
         const action = rule.action || {};
+
+        console.log(`Evaluating rule ${rule.name} (ID: ${rule.id}) for room ${room.id}`);
 
         // Check date range if specified
         if (rule.date_from && rule.date_to) {
             const from = new Date(rule.date_from);
+            from.setHours(0, 0, 0, 0);
+
             const to = new Date(rule.date_to);
+            to.setHours(23, 59, 59, 999); // Include the entire end date
+
+            console.log(`  Date check: Today ${today.toISOString()} vs Range ${from.toISOString()} - ${to.toISOString()}`);
 
             if (today < from || today > to) {
+                console.log('  -> Failed date range');
                 return null; // Outside date range
             }
         }
@@ -146,6 +157,7 @@ export class PricingEngine {
         if (rule.days_of_week && rule.days_of_week.length > 0) {
             const dayOfWeek = today.getDay();
             if (!rule.days_of_week.includes(dayOfWeek)) {
+                console.log(`  -> Failed day of week: Today ${dayOfWeek} vs Allowed [${rule.days_of_week.join(',')}]`);
                 return null; // Wrong day of week
             }
         }

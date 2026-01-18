@@ -182,25 +182,50 @@ export default function InventoryPage() {
         let adjustedPrice = basePrice;
         let reasons: string[] = [];
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+
 
         // Find rules for this property
         const activeRules = pricingRules.filter(r => r.property_id === room.property_id);
 
         activeRules.forEach(rule => {
             let applies = false;
-            // Simplified logic for "Today's Rate"
-            if (rule.rule_type === 'seasonal') {
+            // Check Date Range (Seasonal, Event, etc.)
+            if (rule.date_from && rule.date_to) {
                 const start = new Date(rule.date_from);
+                start.setHours(0, 0, 0, 0);
                 const end = new Date(rule.date_to);
-                if (today >= start && today <= end) applies = true;
-            } else if (rule.rule_type === 'weekend') {
+                end.setHours(23, 59, 59, 999);
+
+                if (today >= start && today <= end) {
+                    applies = true;
+                } else {
+                    applies = false; // logic hierarchy: range must match if present
+                }
+            }
+
+            // Check Days of Week (Weekend, etc.)
+            if (rule.days_of_week && rule.days_of_week.length > 0) {
                 const day = today.getDay();
-                // Friday (5) and Saturday (6) are weekend nights usually
+                if (rule.days_of_week.includes(day)) {
+                    // If date range was checked and passed (or not present), and day matches -> applies
+                    if (!rule.date_from || applies) applies = true;
+                } else {
+                    applies = false;
+                }
+            } else if (rule.rule_type === 'weekend' && (!rule.days_of_week || rule.days_of_week.length === 0)) {
+                // Fallback for old weekend rules without specific days
+                const day = today.getDay();
                 if (day === 5 || day === 6) applies = true;
             } else if (rule.rule_type === 'last_minute') {
                 // Assuming "Today" counts as 0 days before checkin
                 if (rule.conditions.days_before_checkin >= 0) applies = true;
             }
+
+            // Simplified logic: If we have dates/days, they dictate 'applies'. 
+            // If we have neither (e.g. simple global rule), it might apply by default? 
+            // For now, assume 'seasonal'/'event' implies date requirement.
 
             if (applies) {
                 const action = rule.action;
@@ -296,10 +321,10 @@ export default function InventoryPage() {
                                         <div className="flex flex-col">
                                             <div className="flex items-center gap-2">
                                                 <span className={`font-bold ${effective.price > (room.current_price ?? property?.base_price)
-                                                        ? 'text-red-500'
-                                                        : effective.price < (room.current_price ?? property?.base_price)
-                                                            ? 'text-green-600'
-                                                            : ''
+                                                    ? 'text-red-500'
+                                                    : effective.price < (room.current_price ?? property?.base_price)
+                                                        ? 'text-green-600'
+                                                        : ''
                                                     }`}>
                                                     ${effective.price.toFixed(2)}
                                                 </span>
