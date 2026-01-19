@@ -148,7 +148,7 @@ export default async function Dashboard() {
                 <DollarSign className="h-5 w-5 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${netRevenue.toLocaleString()}</div>
+                <div className="text-xl lg:text-2xl font-bold truncate" title={`$${netRevenue.toLocaleString()}`}>${netRevenue.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">After {refundCount} refunds</p>
               </CardContent>
             </Card>
@@ -159,7 +159,7 @@ export default async function Dashboard() {
                 <RotateCcw className="h-5 w-5 text-red-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-red-500">-${totalRefunds.toLocaleString()}</div>
+                <div className="text-xl lg:text-2xl font-bold text-red-500 truncate" title={`-$${totalRefunds.toLocaleString()}`}>-${totalRefunds.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">{refundCount} booking{refundCount !== 1 ? 's' : ''} refunded</p>
               </CardContent>
             </Card>
@@ -170,7 +170,7 @@ export default async function Dashboard() {
                 <TrendingUp className="h-5 w-5 text-emerald-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-500">+${revenueLift.toLocaleString()}</div>
+                <div className="text-xl lg:text-2xl font-bold text-emerald-500 truncate" title={`+$${revenueLift.toLocaleString()}`}>+${revenueLift.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground">
                   {liftVal > 0 ? '+' : ''}{liftPercentage}% over base price
                 </p>
@@ -183,7 +183,7 @@ export default async function Dashboard() {
                 <Users className="h-5 w-5 text-cyan-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{occupancyRate}%</div>
+                <div className="text-xl lg:text-2xl font-bold truncate" title={`${occupancyRate}%`}>{occupancyRate}%</div>
                 <p className="text-xs text-muted-foreground">{occupiedCount} / {totalRoomCount} rooms booked</p>
               </CardContent>
             </Card>
@@ -194,7 +194,7 @@ export default async function Dashboard() {
                 <Calendar className="h-5 w-5 text-purple-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">+{occupiedCount}</div>
+                <div className="text-xl lg:text-2xl font-bold truncate" title={`${occupiedCount}`}>+{occupiedCount}</div>
                 <p className="text-xs text-muted-foreground">Checked in right now</p>
               </CardContent>
             </Card>
