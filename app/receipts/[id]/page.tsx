@@ -74,6 +74,9 @@ export default function ReceiptPage() {
     const checkOut = new Date(booking.check_out);
     const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
 
+    // Calculate extras total
+    const extrasTotal = extras.reduce((sum, e) => sum + (Number(e.price || 0) * Number(e.quantity || 1)), 0);
+
     const roomTotal = Number(booking.total_paid) - (Number(booking.tax_total) || 0); // Back-calculate room total if needed, or use stored total_paid which usually includes tax
     // Actually, total_paid in DB includes everything. 
     // Let's rely on tax_total and tax_details from booking.
