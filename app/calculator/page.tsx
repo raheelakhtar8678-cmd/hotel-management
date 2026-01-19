@@ -367,6 +367,7 @@ export default function CalculatorPage() {
                                             id="checkIn"
                                             type="date"
                                             value={checkIn}
+                                            min={new Date().toISOString().split('T')[0]}
                                             onChange={(e) => setCheckIn(e.target.value)}
                                         />
                                     </div>
@@ -376,6 +377,7 @@ export default function CalculatorPage() {
                                             id="checkOut"
                                             type="date"
                                             value={checkOut}
+                                            min={checkIn || new Date().toISOString().split('T')[0]}
                                             onChange={(e) => setCheckOut(e.target.value)}
                                         />
                                     </div>
