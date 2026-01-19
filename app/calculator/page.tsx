@@ -307,9 +307,9 @@ export default function CalculatorPage() {
                                         }}
                                     >
                                         <option value="">Select room...</option>
-                                        {rooms.map(r => (
+                                        {rooms.filter(r => r.status === 'available').map(r => (
                                             <option key={r.id} value={r.id}>
-                                                {r.type} - ${r.current_price}/night
+                                                {r.name || r.type} ({r.type}) - ${r.current_price}/night
                                             </option>
                                         ))}
                                     </select>
