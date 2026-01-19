@@ -30,6 +30,7 @@ export default function CalculatorPage() {
     const [pricingMode, setPricingMode] = useState('auto');
     const [selectedRuleId, setSelectedRuleId] = useState('');
     const [appliedRules, setAppliedRules] = useState<any[]>([]);
+    const [taxes, setTaxes] = useState<any[]>([]);
 
     useEffect(() => {
         fetchData();
@@ -39,8 +40,10 @@ export default function CalculatorPage() {
         if (selectedProperty) {
             fetchRooms(selectedProperty);
             fetchPricingRules(selectedProperty);
+            fetchTaxes(selectedProperty);
         } else {
             setPricingRules([]);
+            setTaxes([]);
         }
     }, [selectedProperty]);
 
@@ -71,6 +74,16 @@ export default function CalculatorPage() {
             setPricingRules(data.rules || []);
         } catch (error) {
             console.error('Error fetching rules:', error);
+        }
+    };
+
+    const fetchTaxes = async (propertyId: string) => {
+        try {
+            const res = await fetch(`/api/taxes?property_id=${propertyId}`);
+            const data = await res.json();
+            setTaxes(data.taxes || []);
+        } catch (error) {
+            console.error('Error fetching taxes:', error);
         }
     };
 
@@ -184,7 +197,44 @@ export default function CalculatorPage() {
         return sum + (e.chargeType === 'per-night' ? baseAmount * nights : baseAmount);
     }, 0);
     const subtotal = baseRoomTotal + adjustmentsTotal + extrasTotal;
-    const tax = subtotal * 0.1; // 10% tax
+
+    // Calculate taxes dynamically
+    let taxBreakdown: any[] = [];
+    let totalTax = 0;
+
+    taxes.forEach(tax => {
+        let taxAmount = 0;
+        let baseForTax = 0;
+
+        // Determine what to apply tax to
+        if (tax.applies_to === 'room') {
+            baseForTax = baseRoomTotal + adjustmentsTotal;
+        } else if (tax.applies_to === 'extras') {
+            baseForTax = extrasTotal;
+        } else if (tax.applies_to === 'total') {
+            baseForTax = subtotal;
+        }
+
+        // Calculate tax amount
+        if (tax.type === 'percentage') {
+            taxAmount = baseForTax * (Number(tax.value) / 100);
+        } else if (tax.type === 'fixed') {
+            taxAmount = Number(tax.value);
+        }
+
+        if (taxAmount > 0) {
+            totalTax += taxAmount;
+            taxBreakdown.push({
+                name: tax.name,
+                type: tax.type,
+                value: tax.value,
+                amount: taxAmount,
+                applies_to: tax.applies_to
+            });
+        }
+    });
+
+    const tax = totalTax;
     const total = subtotal + tax;
 
     const handleSaveQuote = async () => {
@@ -205,7 +255,9 @@ export default function CalculatorPage() {
                     check_in: checkIn,
                     check_out: checkOut,
                     total_price: total,
-                    status: 'confirmed'
+                    status: 'confirmed',
+                    taxes_applied: JSON.stringify(taxBreakdown),
+                    tax_total: tax
                 })
             });
 
@@ -490,10 +542,34 @@ export default function CalculatorPage() {
                                                 <span className="text-muted-foreground">Subtotal</span>
                                                 <span className="font-medium">${subtotal.toFixed(2)}</span>
                                             </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">Tax (10%)</span>
-                                                <span className="font-medium">${tax.toFixed(2)}</span>
-                                            </div>
+
+                                            {/* Tax Breakdown */}
+                                            {taxBreakdown.length > 0 && (
+                                                <div className="pt-2 border-t space-y-2">
+                                                    {taxBreakdown.map((taxItem, idx) => (
+                                                        <div key={idx} className="flex justify-between text-sm text-blue-600">
+                                                            <span>
+                                                                {taxItem.name}
+                                                                {taxItem.type === 'percentage' && (
+                                                                    <span className="text-xs ml-1 opacity-70">
+                                                                        ({taxItem.value}%)
+                                                                    </span>
+                                                                )}
+                                                                {taxItem.type === 'fixed' && (
+                                                                    <span className="text-xs ml-1 opacity-70">
+                                                                        (fixed)
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            <span>+${taxItem.amount.toFixed(2)}</span>
+                                                        </div>
+                                                    ))}
+                                                    <div className="flex justify-between text-sm font-medium border-t pt-2">
+                                                        <span className="text-muted-foreground">Total Tax</span>
+                                                        <span>${tax.toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="flex justify-between items-center pt-2">
                                             <span className="text-lg font-bold">TOTAL</span>

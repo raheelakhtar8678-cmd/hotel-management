@@ -8,7 +8,7 @@ import { Database, Copy, CheckCircle2, Settings as SettingsIcon } from "lucide-r
 export default function SettingsPage() {
     const [copied, setCopied] = useState(false);
 
-    const migrationSQL = `-- Database Migration: Add Amenities and Images
+    const migrationSQL = `-- Database Migration: Add Amenities, Images, and Tax System
 -- Run this SQL in your Neon/Vercel Postgres dashboard
 
 -- Add amenities column to rooms (stores JSON array of amenity IDs)
@@ -20,10 +20,24 @@ ALTER TABLE rooms ADD COLUMN IF NOT EXISTS images TEXT;
 -- Add images column to properties (stores JSON array of image URLs - up to 5)
 ALTER TABLE properties ADD COLUMN IF NOT EXISTS images TEXT;
 
--- Optional: Remove old image_url columns if they exist
--- Uncomment these if you previously had image_url columns:
--- ALTER TABLE rooms DROP COLUMN IF EXISTS image_url;
--- ALTER TABLE properties DROP COLUMN IF EXISTS image_url;`;
+-- Create taxes table for custom tax rules
+CREATE TABLE IF NOT EXISTS taxes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('percentage', 'fixed')),
+    value NUMERIC NOT NULL CHECK (value >= 0),
+    applies_to TEXT NOT NULL CHECK (applies_to IN ('room', 'extras', 'total')),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Add tax fields to bookings
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS taxes_applied TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS tax_total NUMERIC DEFAULT 0;
+
+-- Create index for faster tax lookups
+CREATE INDEX IF NOT EXISTS idx_taxes_property ON taxes(property_id) WHERE is_active = true;`;
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(migrationSQL);

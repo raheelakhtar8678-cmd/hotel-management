@@ -85,7 +85,9 @@ export async function POST(request: Request) {
             guests,
             total_price,
             status,
-            channel
+            channel,
+            taxes_applied,
+            tax_total
         } = body;
 
         if (!room_id || !guest_name || !check_in || !check_out) {
@@ -98,10 +100,11 @@ export async function POST(request: Request) {
         const { rows } = await sql`
             INSERT INTO bookings (
                 room_id, guest_name, guest_email, check_in, check_out,
-                guests, total_paid, status, channel
+                guests, total_paid, status, channel, taxes_applied, tax_total
             ) VALUES (
                 ${room_id}, ${guest_name}, ${guest_email || null}, ${check_in}, ${check_out},
-                ${guests || 1}, ${total_price || 0}, ${status || 'confirmed'}, ${channel || 'direct'}
+                ${guests || 1}, ${total_price || 0}, ${status || 'confirmed'}, ${channel || 'direct'},
+                ${taxes_applied || null}, ${tax_total || 0}
             )
             RETURNING *
         `;
