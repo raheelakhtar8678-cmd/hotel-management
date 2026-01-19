@@ -51,7 +51,40 @@ export default function CalculatorPage() {
         }
     }, [selectedProperty]);
 
-    // ... (fetchData, fetchRooms, fetchPricingRules remain same)
+    const fetchData = async () => {
+        try {
+            const res = await fetch('/api/properties');
+            const data = await res.json();
+            setProperties(data.properties || []);
+            if (data.properties?.length > 0 && !selectedProperty) {
+                // Optionally select first property? No, let user select.
+            }
+        } catch (error) {
+            console.error('Error fetching properties:', error);
+        }
+    };
+
+    const fetchRooms = async (propertyId: string) => {
+        try {
+            const res = await fetch(`/api/rooms?property_id=${propertyId}`);
+            const data = await res.json();
+            setRooms(data.rooms || []);
+        } catch (error) {
+            console.error('Error fetching rooms:', error);
+        }
+    };
+
+    const fetchPricingRules = async (propertyId: string) => {
+        try {
+            const res = await fetch(`/api/pricing-rules?property_id=${propertyId}`);
+            const data = await res.json();
+            if (data.success) {
+                setPricingRules(data.rules || []);
+            }
+        } catch (error) {
+            console.error('Error fetching pricing rules:', error);
+        }
+    };
 
     const fetchTaxes = async (propertyId: string) => {
         try {
@@ -76,10 +109,66 @@ export default function CalculatorPage() {
         setSelectedTaxIds(newSelected);
     };
 
-    // ... (addExtra, removeExtra, calculateNights, activeAdjustments logic remain same)
+    const addExtra = () => {
+        if (!newExtra.name || !newExtra.price) return;
+        setExtras([...extras, { ...newExtra, id: Date.now().toString() }]);
+        setNewExtra({ name: '', price: '', quantity: 1, chargeType: 'one-time' });
+    };
+
+    const removeExtra = (id: string) => {
+        setExtras(extras.filter(e => e.id !== id));
+    };
+
+    // Calculations
+    const calculateNights = () => {
+        if (!checkIn || !checkOut) return 0;
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays > 0 ? diffDays : 0;
+    };
+
+    const nights = calculateNights();
+
+    // Base Room Total
+    let baseRoomTotal = 0;
+    if (selectedRoom && nights > 0) {
+        baseRoomTotal = Number(selectedRoom.current_price) * nights;
+    }
+
+    // Active Adjustments
+    const activeAdjustments: any[] = [];
+    let adjustmentsTotal = 0;
+
+    const rulesToApply = pricingMode === 'manual'
+        ? pricingRules.filter(r => r.id === selectedRuleId)
+        : pricingRules.filter(r => r.is_active); // Simple auto logic for now, usually would check dates
+
+    // In a real scenario, "auto" might select rules based on date overlap. 
+    // For this calculator version, let's treat "auto" as "all active rules" or maybe "none" if we don't have date logic?
+    // Let's stick to: Manual selects one, Auto selects active ones (simplification).
+
+    rulesToApply.forEach(rule => {
+        let amount = 0;
+        if (rule.type === 'fixed') {
+            amount = Number(rule.value);
+        } else if (rule.type === 'percentage') {
+            amount = baseRoomTotal * (Number(rule.value) / 100);
+        }
+
+        if (amount !== 0) {
+            activeAdjustments.push({
+                name: rule.name,
+                amount: amount,
+                percentage: rule.type === 'percentage' ? rule.value : null
+            });
+            adjustmentsTotal += amount;
+        }
+    });
 
     const extrasTotal = extras.reduce((sum, e) => {
-        const baseAmount = e.price * e.quantity;
+        const baseAmount = Number(e.price) * Number(e.quantity);
         return sum + (e.chargeType === 'per-night' ? baseAmount * nights : baseAmount);
     }, 0);
     const subtotal = baseRoomTotal + adjustmentsTotal + extrasTotal;
