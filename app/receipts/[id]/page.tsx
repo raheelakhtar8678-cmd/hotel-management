@@ -123,7 +123,14 @@ export default function ReceiptPage() {
                         {/* Header */}
                         <div className="text-center border-b pb-6 print:pb-4">
                             <h1 className="text-3xl font-bold mb-2 uppercase tracking-wide">{booking.property_name}</h1>
-                            <p className="text-muted-foreground">{booking.address || 'Address not listed'}</p>
+                            <div className="text-muted-foreground space-y-1">
+                                <p>{booking.address || 'Address not listed'}</p>
+                                {booking.caretaker_phone && (
+                                    <p className="flex items-center justify-center gap-2">
+                                        <span className="font-medium">Tel:</span> {booking.caretaker_phone}
+                                    </p>
+                                )}
+                            </div>
                             <div className="mt-4 inline-block px-4 py-1 border rounded-full text-sm font-semibold uppercase tracking-wider">
                                 Booking Receipt
                             </div>
@@ -160,16 +167,47 @@ export default function ReceiptPage() {
                             <div className="bg-secondary/10 p-4 rounded-lg print:border print:bg-transparent">
                                 <h3 className="font-semibold mb-2 text-primary">Room Details</h3>
                                 <div className="space-y-1 text-sm">
-                                    <p className="font-medium">{booking.room_type}</p>
-                                    <p className="text-muted-foreground">
-                                        Check-in: <span className="font-semibold text-foreground">{checkIn.toLocaleDateString()}</span>
-                                    </p>
-                                    <p className="text-muted-foreground">
-                                        Check-out: <span className="font-semibold text-foreground">{checkOut.toLocaleDateString()}</span>
-                                    </p>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-medium text-lg">{booking.room_type}</p>
+                                            <p className="text-xs text-muted-foreground font-mono">Room ID: {booking.room_id.slice(0, 8)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 mt-2">
+                                        <p className="text-muted-foreground">
+                                            Check-in:<br />
+                                            <span className="font-semibold text-foreground">{checkIn.toLocaleDateString()}</span>
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                            Check-out:<br />
+                                            <span className="font-semibold text-foreground">{checkOut.toLocaleDateString()}</span>
+                                        </p>
+                                    </div>
                                     <p className="text-xs mt-1 text-muted-foreground">
                                         Duration: {nights} Night{nights > 1 ? 's' : ''}
                                     </p>
+
+                                    {/* Amenities in Room Details */}
+                                    {booking.room_amenities && (
+                                        <div className="pt-2 mt-2 border-t border-dashed">
+                                            <p className="text-xs font-semibold mb-1 text-muted-foreground">Amenities:</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {(() => {
+                                                    try {
+                                                        const amns = typeof booking.room_amenities === 'string'
+                                                            ? JSON.parse(booking.room_amenities)
+                                                            : booking.room_amenities;
+                                                        return Array.isArray(amns) ? amns.map((a: string) => (
+                                                            <span key={a} className="text-[10px] bg-white px-1.5 py-0.5 rounded border border-gray-200">
+                                                                {a}
+                                                            </span>
+                                                        )) : null;
+                                                    } catch { return null; }
+                                                })()}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -211,7 +249,7 @@ export default function ReceiptPage() {
                                     {taxBreakdown.length > 0 ? (
                                         taxBreakdown.map((t: any, i: number) => (
                                             <div key={i} className="flex justify-between text-sm text-muted-foreground">
-                                                <span>{t.name} ({t.type === 'percentage' ? `${t.value}%` : 'fixed'})</span>
+                                                <span>{t.name} ({t.type === 'percentage' ? `${t.value}%` : 'fixed'}) on {t.applies_to}</span>
                                                 <span>+${Number(t.amount).toFixed(2)}</span>
                                             </div>
                                         ))
@@ -237,23 +275,6 @@ export default function ReceiptPage() {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Amenities (Optional but nice) */}
-                        {booking.room_amenities && (
-                            <div className="pt-4 border-t print:hidden">
-                                <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Included Amenities:</h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {(() => {
-                                        try {
-                                            const amns = JSON.parse(booking.room_amenities);
-                                            return Array.isArray(amns) ? amns.map((a: string) => (
-                                                <Badge key={a} variant="outline" className="text-xs">{a}</Badge>
-                                            )) : null;
-                                        } catch { return null; }
-                                    })()}
-                                </div>
-                            </div>
-                        )}
 
                         {/* Footer */}
                         <div className="text-center text-sm text-muted-foreground pt-6 border-t print:pt-4">
