@@ -13,7 +13,7 @@ export async function GET(request: Request) {
         if (id) {
             // Fetch single booking with room and property details
             const { rows } = await sql`
-                SELECT b.*, r.type as room_type, r.amenities as room_amenities, r.property_id, p.name as property_name, p.address, p.caretaker_phone
+                SELECT b.*, r.type as room_type, r.amenities as room_amenities, r.property_id, p.name as property_name, p.address
                 FROM bookings b
                 JOIN rooms r ON b.room_id = r.id
                 JOIN properties p ON r.property_id = p.id
