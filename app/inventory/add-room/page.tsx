@@ -21,7 +21,8 @@ export default function AddRoomPage() {
     const [properties, setProperties] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
-    const [imageUrl, setImageUrl] = useState('');
+    const [images, setImages] = useState<string[]>(['', '', '', '', '']);
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
 
     const AMENITIES_LIST = [
         { id: 'tv', label: 'TV', icon: '📺' },
@@ -72,7 +73,7 @@ export default function AddRoomPage() {
                     name: name,
                     current_price: parseFloat(price) || 100,
                     amenities: selectedAmenities,
-                    image_url: imageUrl || null
+                    images: images.filter(url => url.trim() !== '')
                 }),
             });
 
@@ -220,8 +221,8 @@ export default function AddRoomPage() {
                                                 }
                                             }}
                                             className={`flex items-center gap-2 p-2 rounded-lg border text-sm transition-all ${selectedAmenities.includes(amenity.id)
-                                                    ? 'bg-primary/20 border-primary text-primary'
-                                                    : 'bg-secondary/30 border-transparent hover:border-primary/30'
+                                                ? 'bg-primary/20 border-primary text-primary'
+                                                : 'bg-secondary/30 border-transparent hover:border-primary/30'
                                                 }`}
                                         >
                                             <span>{amenity.icon}</span>
@@ -231,29 +232,93 @@ export default function AddRoomPage() {
                                 </div>
                             </div>
 
-                            {/* Image URL */}
-                            <div className="space-y-2">
-                                <Label htmlFor="image_url">Room Image URL</Label>
-                                <Input
-                                    id="image_url"
-                                    placeholder="https://images.unsplash.com/..."
-                                    value={imageUrl}
-                                    onChange={(e) => setImageUrl(e.target.value)}
-                                    className="bg-input border-primary/20"
-                                />
+                            {/* Room Images Gallery (5 slots) */}
+                            <div className="space-y-3">
+                                <Label>Room Images (up to 5)</Label>
                                 <p className="text-xs text-muted-foreground">
-                                    Paste an image URL from Unsplash, Google Images, or your own hosting
+                                    Add up to 5 images to showcase your room
                                 </p>
-                                {imageUrl && (
-                                    <div className="mt-2 rounded-lg overflow-hidden border border-primary/20">
+
+                                {/* Main Preview */}
+                                <div className="relative rounded-xl overflow-hidden border-2 border-primary/30 bg-secondary/20 aspect-video">
+                                    {images[activeImageIndex] ? (
                                         <img
-                                            src={imageUrl}
-                                            alt="Room preview"
-                                            className="w-full h-32 object-cover"
-                                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                                            src={images[activeImageIndex]}
+                                            alt={`Room image ${activeImageIndex + 1}`}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                e.currentTarget.src = '';
+                                                e.currentTarget.alt = 'Failed to load';
+                                            }}
                                         />
-                                    </div>
-                                )}
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                                            <div className="text-center">
+                                                <span className="text-4xl">📷</span>
+                                                <p className="text-sm mt-2">No image added yet</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {images[activeImageIndex] && (
+                                        <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                                            Image {activeImageIndex + 1} of {images.filter(i => i).length}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Thumbnail Strip */}
+                                <div className="flex gap-2">
+                                    {images.map((img, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setActiveImageIndex(idx)}
+                                            className={`relative w-16 h-16 rounded-lg border-2 overflow-hidden transition-all ${activeImageIndex === idx
+                                                    ? 'border-primary ring-2 ring-primary/30'
+                                                    : 'border-transparent hover:border-primary/50'
+                                                } ${img ? '' : 'bg-secondary/30'}`}
+                                        >
+                                            {img ? (
+                                                <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+                                                    {idx + 1}
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* URL Input for selected image */}
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder={`Paste image URL for slot ${activeImageIndex + 1}...`}
+                                        value={images[activeImageIndex]}
+                                        onChange={(e) => {
+                                            const newImages = [...images];
+                                            newImages[activeImageIndex] = e.target.value;
+                                            setImages(newImages);
+                                        }}
+                                        className="bg-input border-primary/20"
+                                    />
+                                    {images[activeImageIndex] && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => {
+                                                const newImages = [...images];
+                                                newImages[activeImageIndex] = '';
+                                                setImages(newImages);
+                                            }}
+                                        >
+                                            ✕
+                                        </Button>
+                                    )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Click a slot above, then paste an image URL from Unsplash, Google Images, or your hosting
+                                </p>
                             </div>
 
                             <Button

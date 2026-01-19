@@ -19,6 +19,8 @@ import { useRouter } from "next/navigation";
 export default function AddPropertyPage() {
     const router = useRouter();
     const [saving, setSaving] = useState(false);
+    const [images, setImages] = useState<string[]>(['', '', '', '', '']);
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [formData, setFormData] = useState({
         name: '',
         property_type: 'hotel',
@@ -62,7 +64,8 @@ export default function AddPropertyPage() {
                 caretaker_name: formData.caretaker_name,
                 caretaker_email: formData.caretaker_email,
                 caretaker_phone: formData.caretaker_phone,
-                structure_details: structureDetails
+                structure_details: structureDetails,
+                images: images.filter(url => url.trim() !== '')
             };
 
             const response = await fetch('/api/properties', {
@@ -339,6 +342,96 @@ export default function AddPropertyPage() {
                                     This is your default price. Pricing rules will adjust this automatically.
                                 </p>
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Property Images Gallery */}
+                    <Card className="glass-card">
+                        <CardHeader>
+                            <CardTitle>Property Images</CardTitle>
+                            <CardDescription>Add up to 5 photos to showcase your property</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {/* Main Preview */}
+                            <div className="relative rounded-xl overflow-hidden border-2 border-primary/30 bg-secondary/20 aspect-video">
+                                {images[activeImageIndex] ? (
+                                    <img
+                                        src={images[activeImageIndex]}
+                                        alt={`Property image ${activeImageIndex + 1}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            e.currentTarget.src = '';
+                                            e.currentTarget.alt = 'Failed to load';
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                                        <div className="text-center">
+                                            <span className="text-5xl">🏠</span>
+                                            <p className="text-sm mt-2">Add images to attract guests</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {images[activeImageIndex] && (
+                                    <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                                        {activeImageIndex + 1} / {images.filter(i => i).length}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Thumbnail Strip */}
+                            <div className="flex gap-2">
+                                {images.map((img, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => setActiveImageIndex(idx)}
+                                        className={`relative w-16 h-16 rounded-lg border-2 overflow-hidden transition-all ${activeImageIndex === idx
+                                                ? 'border-primary ring-2 ring-primary/30'
+                                                : 'border-transparent hover:border-primary/50'
+                                            } ${img ? '' : 'bg-secondary/30'}`}
+                                    >
+                                        {img ? (
+                                            <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+                                                {idx + 1}
+                                            </div>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* URL Input */}
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder={`Paste image URL for slot ${activeImageIndex + 1}...`}
+                                    value={images[activeImageIndex]}
+                                    onChange={(e) => {
+                                        const newImages = [...images];
+                                        newImages[activeImageIndex] = e.target.value;
+                                        setImages(newImages);
+                                    }}
+                                    className="bg-input border-primary/20"
+                                />
+                                {images[activeImageIndex] && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                            const newImages = [...images];
+                                            newImages[activeImageIndex] = '';
+                                            setImages(newImages);
+                                        }}
+                                    >
+                                        ✕
+                                    </Button>
+                                )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                💡 Tip: Use high-quality images from Unsplash or your own photography
+                            </p>
                         </CardContent>
                     </Card>
 

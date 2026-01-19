@@ -58,7 +58,8 @@ export async function POST(request: Request) {
             caretaker_name,
             caretaker_email,
             caretaker_phone,
-            structure_details
+            structure_details,
+            images
         } = body;
 
         if (!name || !base_price) {
@@ -76,6 +77,9 @@ export async function POST(request: Request) {
         const min_price = Math.floor(base_price * 0.5);
         const max_price = Math.floor(base_price * 2);
 
+        // Convert images array to JSON for storage
+        const imagesJson = images && images.length > 0 ? JSON.stringify(images) : null;
+
         // Use Vercel Postgres SQL
         const result = await sql`
             INSERT INTO properties (
@@ -83,14 +87,14 @@ export async function POST(request: Request) {
                 bedrooms, bathrooms, max_guests, 
                 base_price, min_price, max_price, 
                 timezone, is_active,
-                caretaker_name, caretaker_email, caretaker_phone, structure_details
+                caretaker_name, caretaker_email, caretaker_phone, structure_details, images
             ) VALUES (
                 ${userId}, ${name}, ${property_type || 'apartment'}, ${city}, 
                 ${country || 'USA'}, ${address}, ${bedrooms || 1}, ${bathrooms || 1}, 
                 ${max_guests || 2}, 
                 ${base_price}, ${min_price}, ${max_price},
                 ${timezone || 'UTC'}, true,
-                ${caretaker_name}, ${caretaker_email}, ${caretaker_phone}, ${structure_details || '{}'}
+                ${caretaker_name}, ${caretaker_email}, ${caretaker_phone}, ${structure_details || '{}'}, ${imagesJson}
             )
             RETURNING *;
         `;
