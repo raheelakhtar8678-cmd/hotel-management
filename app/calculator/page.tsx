@@ -26,6 +26,7 @@ export default function CalculatorPage() {
     const [checkOut, setCheckOut] = useState('');
     const [guestName, setGuestName] = useState('');
     const [guestEmail, setGuestEmail] = useState('');
+    const [guests, setGuests] = useState(1);
     const [extras, setExtras] = useState<any[]>([]);
     const [newExtra, setNewExtra] = useState({ name: '', price: '', quantity: 1, chargeType: 'one-time' });
     const [pricingRules, setPricingRules] = useState<any[]>([]);
@@ -135,6 +136,7 @@ export default function CalculatorPage() {
     let baseRoomTotal = 0;
     if (selectedRoom && nights > 0) {
         baseRoomTotal = Number(selectedRoom.current_price) * nights;
+        if (isNaN(baseRoomTotal)) baseRoomTotal = 0;
     }
 
     // Active Adjustments
@@ -167,17 +169,23 @@ export default function CalculatorPage() {
         }
     });
 
-    const extrasTotal = extras.reduce((sum, e) => {
+    const extrasTotal = (extras || []).reduce((sum, e) => {
         const baseAmount = Number(e.price) * Number(e.quantity);
         return sum + (e.chargeType === 'per-night' ? baseAmount * nights : baseAmount);
     }, 0);
-    const subtotal = baseRoomTotal + adjustmentsTotal + extrasTotal;
+
+    // Safety check for NaN
+    const safeBase = isNaN(baseRoomTotal) ? 0 : baseRoomTotal;
+    const safeAdj = isNaN(adjustmentsTotal) ? 0 : adjustmentsTotal;
+    const safeExtras = isNaN(extrasTotal) ? 0 : extrasTotal;
+
+    const subtotal = safeBase + safeAdj + safeExtras;
 
     // Calculate taxes dynamically based on selection
     let taxBreakdown: any[] = [];
     let totalTax = 0;
 
-    taxes.forEach(tax => {
+    (taxes || []).forEach(tax => {
         // Skip if not selected
         if (!selectedTaxIds.has(tax.id)) return;
 
@@ -186,9 +194,9 @@ export default function CalculatorPage() {
 
         // Determine what to apply tax to
         if (tax.applies_to === 'room') {
-            baseForTax = baseRoomTotal + adjustmentsTotal;
+            baseForTax = safeBase + safeAdj;
         } else if (tax.applies_to === 'extras') {
-            baseForTax = extrasTotal;
+            baseForTax = safeExtras;
         } else if (tax.applies_to === 'total') {
             baseForTax = subtotal;
         }
@@ -200,7 +208,7 @@ export default function CalculatorPage() {
             taxAmount = Number(tax.value);
         }
 
-        if (taxAmount > 0) {
+        if (taxAmount > 0 && !isNaN(taxAmount)) {
             totalTax += taxAmount;
             taxBreakdown.push({
                 name: tax.name,
@@ -235,7 +243,13 @@ export default function CalculatorPage() {
                     total_price: total,
                     status: 'confirmed',
                     taxes_applied: JSON.stringify(taxBreakdown),
-                    tax_total: tax
+                    guest_name: guestName,
+                    guest_email: guestEmail,
+                    check_in: checkIn,
+                    check_out: checkOut,
+                    guests: guests,
+                    total_price: total,
+                    status: 'confirmed',
                 })
             });
 
@@ -304,6 +318,16 @@ export default function CalculatorPage() {
                                         placeholder="john@example.com"
                                         value={guestEmail}
                                         onChange={(e) => setGuestEmail(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="guests">Number of Guests</Label>
+                                    <Input
+                                        id="guests"
+                                        type="number"
+                                        min="1"
+                                        value={guests}
+                                        onChange={(e) => setGuests(parseInt(e.target.value) || 1)}
                                     />
                                 </div>
                             </CardContent>
