@@ -20,6 +20,21 @@ export default function AddRoomPage() {
     const router = useRouter();
     const [properties, setProperties] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+    const [imageUrl, setImageUrl] = useState('');
+
+    const AMENITIES_LIST = [
+        { id: 'tv', label: 'TV', icon: '📺' },
+        { id: 'wifi', label: 'WiFi', icon: '📶' },
+        { id: 'ac', label: 'Air Conditioning', icon: '❄️' },
+        { id: 'mini_fridge', label: 'Mini Fridge', icon: '🧊' },
+        { id: 'towels', label: 'Towels', icon: '🛁' },
+        { id: 'safe', label: 'Safe', icon: '🔐' },
+        { id: 'balcony', label: 'Balcony', icon: '🏞️' },
+        { id: 'kitchen', label: 'Kitchen', icon: '🍳' },
+        { id: 'coffee_maker', label: 'Coffee Maker', icon: '☕' },
+        { id: 'hairdryer', label: 'Hair Dryer', icon: '💨' },
+    ];
 
     useEffect(() => {
         fetchProperties();
@@ -55,7 +70,9 @@ export default function AddRoomPage() {
                     type: roomType,
                     status: status,
                     name: name,
-                    current_price: parseFloat(price) || 100
+                    current_price: parseFloat(price) || 100,
+                    amenities: selectedAmenities,
+                    image_url: imageUrl || null
                 }),
             });
 
@@ -182,6 +199,61 @@ export default function AddRoomPage() {
                                     <li>Suite: +50-100% above base</li>
                                     <li>Executive: +100%+ above base</li>
                                 </ul>
+                            </div>
+
+                            {/* Amenities Selection */}
+                            <div className="space-y-2">
+                                <Label>Room Amenities</Label>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                    Select amenities included with this room
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {AMENITIES_LIST.map((amenity) => (
+                                        <button
+                                            key={amenity.id}
+                                            type="button"
+                                            onClick={() => {
+                                                if (selectedAmenities.includes(amenity.id)) {
+                                                    setSelectedAmenities(selectedAmenities.filter(a => a !== amenity.id));
+                                                } else {
+                                                    setSelectedAmenities([...selectedAmenities, amenity.id]);
+                                                }
+                                            }}
+                                            className={`flex items-center gap-2 p-2 rounded-lg border text-sm transition-all ${selectedAmenities.includes(amenity.id)
+                                                    ? 'bg-primary/20 border-primary text-primary'
+                                                    : 'bg-secondary/30 border-transparent hover:border-primary/30'
+                                                }`}
+                                        >
+                                            <span>{amenity.icon}</span>
+                                            <span>{amenity.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Image URL */}
+                            <div className="space-y-2">
+                                <Label htmlFor="image_url">Room Image URL</Label>
+                                <Input
+                                    id="image_url"
+                                    placeholder="https://images.unsplash.com/..."
+                                    value={imageUrl}
+                                    onChange={(e) => setImageUrl(e.target.value)}
+                                    className="bg-input border-primary/20"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Paste an image URL from Unsplash, Google Images, or your own hosting
+                                </p>
+                                {imageUrl && (
+                                    <div className="mt-2 rounded-lg overflow-hidden border border-primary/20">
+                                        <img
+                                            src={imageUrl}
+                                            alt="Room preview"
+                                            className="w-full h-32 object-cover"
+                                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <Button
