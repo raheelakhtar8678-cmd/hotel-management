@@ -367,12 +367,20 @@ export default function InventoryPage() {
                         Manage rooms, pricing, and extras across all properties
                     </p>
                 </div>
-                <Link href="/inventory/add-room">
-                    <Button className="bg-gradient-primary hover:opacity-90">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Room
-                    </Button>
-                </Link>
+                <div className="flex gap-2">
+                    <Link href="/settings">
+                        <Button variant="outline">
+                            <Settings className="h-4 w-4 mr-2" />
+                            Manage Taxes
+                        </Button>
+                    </Link>
+                    <Link href="/inventory/add-room">
+                        <Button className="bg-gradient-primary hover:opacity-90">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Room
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             <div className="border rounded-md border-primary/20">
