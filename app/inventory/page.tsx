@@ -51,6 +51,11 @@ export default function InventoryPage() {
     const [syncing, setSyncing] = useState(false);
     const [icalUrl, setIcalUrl] = useState('');
 
+    // Room Details State
+    const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+    const [currentBooking, setCurrentBooking] = useState<any>(null);
+    const [bookingExtras, setBookingExtras] = useState<any[]>([]);
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -220,6 +225,44 @@ export default function InventoryPage() {
         }
     };
 
+    const handleViewDetails = async (room: any) => {
+        setSelectedRoom(room);
+        setShowDetailsDialog(true);
+        setCurrentBooking(null);
+        setBookingExtras([]);
+
+        if (room.status === 'occupied') {
+            try {
+                // Fetch latest booking
+                const res = await fetch(`/api/bookings?room_id=${room.id}`);
+                const data = await res.json();
+                if (data.bookings && data.bookings.length > 0) {
+                    // Assuming API returns sorted by check_in DESC, take the first one (active/latest)
+                    // Better logic would be to find one where status=confirmed and today is between checkin/checkout
+                    const active = data.bookings.find((b: any) => b.status === 'confirmed') || data.bookings[0];
+                    setCurrentBooking(active);
+
+                    // Filter extras for this booking if possible, or just for the room
+                    // Currently extras are fetched for room, but we can filter by booking_id if we store it
+                    // For now, we show room extras as they are attached to the room in this system's logic
+                    // But typically extras should be attached to booking. 
+                    // The current system attaches to room_id (checking schema... room_extras has booking_id)
+                    // So we should filter by booking_id if available.
+
+                    if (active) {
+                        const bookingExtras = extras.filter(e => e.booking_id === active.id || e.room_id === room.id); // Fallback to room_id for now
+                        setBookingExtras(bookingExtras);
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching booking details:", e);
+            }
+        } else {
+            // For available rooms, just show room-attached extras if any (usually extras are per booking)
+            setBookingExtras(extras.filter(e => e.room_id === room.id && !e.booking_id));
+        }
+    };
+
     const getRoomExtras = (roomId: string) => {
         return extras.filter(e => e.room_id === roomId);
     };
@@ -357,7 +400,14 @@ export default function InventoryPage() {
 
                             return (
                                 <TableRow key={room.id}>
-                                    <TableCell className="font-medium">{room.name || (room.id ? `${room.id.slice(0, 8)}...` : 'N/A')}</TableCell>
+                                    <TableCell className="font-medium">
+                                        <button
+                                            onClick={() => handleViewDetails(room)}
+                                            className="hover:underline text-primary text-left font-semibold"
+                                        >
+                                            {room.name || (room.id ? `${room.id.slice(0, 8)}...` : 'N/A')}
+                                        </button>
+                                    </TableCell>
                                     <TableCell>{property?.name}</TableCell>
                                     <TableCell>{room.type || 'Unknown'}</TableCell>
                                     <TableCell>
@@ -366,8 +416,8 @@ export default function InventoryPage() {
                                                 <Badge
                                                     variant={room.status === 'available' ? 'default' : room.status === 'occupied' ? 'secondary' : 'outline'}
                                                     className={`cursor-pointer hover:opacity-80 ${room.status === 'available' ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30' :
-                                                            room.status === 'occupied' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
-                                                                'bg-blue-500/20 text-blue-500 border-blue-500/30'
+                                                        room.status === 'occupied' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' :
+                                                            'bg-blue-500/20 text-blue-500 border-blue-500/30'
                                                         }`}
                                                 >
                                                     {room.status || 'unknown'}
@@ -649,6 +699,141 @@ export default function InventoryPage() {
                             <Button onClick={handleUpdateRoom}>
                                 Save Settings
                             </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Room Details Dialog (New) */}
+            <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl flex items-center gap-2">
+                            {selectedRoom?.name}
+                            <Badge variant="outline" className={
+                                selectedRoom?.status === 'occupied' ? 'bg-amber-500/10 text-amber-500' :
+                                    selectedRoom?.status === 'available' ? 'bg-emerald-500/10 text-emerald-500' : ''
+                            }>
+                                {selectedRoom?.status}
+                            </Badge>
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedRoom?.type} • {propertyMap.get(selectedRoom?.property_id)?.name}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                        {/* Left Column: Room Info & Amenities */}
+                        <div className="space-y-6">
+                            {/* Amenities */}
+                            <div className="bg-secondary/10 p-4 rounded-lg border">
+                                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                    <Package className="h-4 w-4" /> Amenities
+                                </h4>
+                                {selectedRoom?.amenities ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {(() => {
+                                            try {
+                                                const amns = JSON.parse(selectedRoom.amenities);
+                                                return Array.isArray(amns) && amns.length > 0 ? (
+                                                    amns.map((a: string) => (
+                                                        <Badge key={a} variant="secondary">{a}</Badge>
+                                                    ))
+                                                ) : <span className="text-muted-foreground text-sm">No amenities listed</span>;
+                                            } catch { return <span className="text-muted-foreground text-sm">Invalid amenity data</span>; }
+                                        })()}
+                                    </div>
+                                ) : (
+                                    <span className="text-muted-foreground text-sm">No amenities listed</span>
+                                )}
+                            </div>
+
+                            {/* Extras */}
+                            <div>
+                                <h4 className="font-semibold mb-2">Active Extras</h4>
+                                {bookingExtras.length > 0 || (selectedRoom && getRoomExtras(selectedRoom.id).length > 0) ? (
+                                    <div className="space-y-2 border rounded-lg p-2">
+                                        {(bookingExtras.length > 0 ? bookingExtras : getRoomExtras(selectedRoom?.id || '')).map((e, idx) => (
+                                            <div key={idx} className="flex justify-between text-sm p-2 bg-secondary/20 rounded">
+                                                <span>{e.item_name} (x{e.quantity})</span>
+                                                <span className="font-mono">${(e.price * e.quantity).toFixed(2)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No extras added</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Right Column: Guest & Booking Info */}
+                        <div className="space-y-6">
+                            {currentBooking ? (
+                                <div className="border border-emerald-500/30 bg-emerald-500/5 rounded-lg p-5 space-y-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h4 className="font-bold text-lg mb-1">{currentBooking.guest_name}</h4>
+                                            <p className="text-sm text-muted-foreground">{currentBooking.guest_email || 'No email'}</p>
+                                            <p className="text-sm text-muted-foreground">{currentBooking.guest_phone || 'No phone'}</p>
+                                        </div>
+                                        <div className="text-right text-xs text-muted-foreground">
+                                            Booking ID: <br />
+                                            <span className="font-mono">{currentBooking.id.slice(0, 8)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 text-sm mt-4">
+                                        <div className="bg-background/50 p-2 rounded">
+                                            <span className="block text-muted-foreground text-xs">Check In</span>
+                                            <span className="font-medium">{new Date(currentBooking.check_in).toLocaleDateString()}</span>
+                                        </div>
+                                        <div className="bg-background/50 p-2 rounded">
+                                            <span className="block text-muted-foreground text-xs">Check Out</span>
+                                            <span className="font-medium">{new Date(currentBooking.check_out).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Financials with Tax Breakdown */}
+                                    <div className="pt-4 border-t border-emerald-500/20 space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span>Start Date</span>
+                                            <span>{new Date(currentBooking.created_at).toLocaleDateString()}</span>
+                                        </div>
+
+                                        {/* Tax Display */}
+                                        {currentBooking.taxes_applied && (
+                                            <div className="py-2 space-y-1">
+                                                {(() => {
+                                                    try {
+                                                        const taxes = JSON.parse(currentBooking.taxes_applied);
+                                                        return Array.isArray(taxes) ? taxes.map((t: any, i: number) => (
+                                                            <div key={i} className="flex justify-between text-xs text-muted-foreground">
+                                                                <span>{t.name} ({t.type === 'percentage' ? `${t.value}%` : 'fixed'})</span>
+                                                                <span>${Number(t.amount).toFixed(2)}</span>
+                                                            </div>
+                                                        )) : null;
+                                                    } catch { return null; }
+                                                })()}
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between font-bold text-lg pt-2 border-t text-emerald-600">
+                                            <span>Total Paid</span>
+                                            <span>${Number(currentBooking.total_paid).toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg text-muted-foreground">
+                                    <Calendar className="h-12 w-12 mb-3 opacity-20" />
+                                    <p>Room is currently empty</p>
+                                    <p className="text-xs mt-1">No active booking found</p>
+
+                                    <Button variant="outline" className="mt-4" onClick={() => window.location.href = '/calculator'}>
+                                        Go to Calculator
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </DialogContent>

@@ -8,19 +8,108 @@ import { Database, Copy, CheckCircle2, Settings as SettingsIcon } from "lucide-r
 export default function SettingsPage() {
     const [copied, setCopied] = useState(false);
 
-    const migrationSQL = `-- Database Migration: Add Amenities, Images, and Tax System
--- Run this SQL in your Neon/Vercel Postgres dashboard
+    const migrationSQL = `-- COMPLETE DATABASE SETUP & MIGRATION
+-- Run this entire script in your Neon/Vercel Postgres dashboard to set up everything.
 
--- Add amenities column to rooms (stores JSON array of amenity IDs)
-ALTER TABLE rooms ADD COLUMN IF NOT EXISTS amenities TEXT;
+-- 1. ENABLE EXTENSIONS
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Add images column to rooms (stores JSON array of image URLs - up to 5)
-ALTER TABLE rooms ADD COLUMN IF NOT EXISTS images TEXT;
+-- 2. BASE TABLES (If not already created)
 
--- Add images column to properties (stores JSON array of image URLs - up to 5)
-ALTER TABLE properties ADD COLUMN IF NOT EXISTS images TEXT;
+-- Properties Table
+CREATE TABLE IF NOT EXISTS properties (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    address TEXT,
+    city TEXT,
+    country TEXT,
+    type VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'active',
+    base_price DECIMAL(10, 2),
+    min_price DECIMAL(10, 2),
+    max_price DECIMAL(10, 2),
+    images TEXT, -- Stores JSON array of image URLs
+    amenities TEXT, -- Stores JSON array of amenities
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    bedrooms INTEGER,
+    bathrooms DECIMAL(3, 1),
+    max_guests INTEGER,
+    timezone VARCHAR(50) DEFAULT 'UTC',
+    caretaker_name VARCHAR(100),
+    caretaker_email VARCHAR(100),
+    caretaker_phone VARCHAR(20),
+    structure_details JSONB DEFAULT '{}',
+    is_active BOOLEAN DEFAULT true
+);
 
--- Create taxes table for custom tax rules
+-- Rooms Table
+CREATE TABLE IF NOT EXISTS rooms (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    type VARCHAR(50),
+    description TEXT,
+    capacity INTEGER,
+    base_price DECIMAL(10, 2),
+    current_price DECIMAL(10, 2),
+    status VARCHAR(20) DEFAULT 'available',
+    last_cleaned_at TIMESTAMP WITH TIME ZONE,
+    amenities TEXT, -- Stores JSON array of amenities
+    images TEXT, -- Stores JSON array of image URLs
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_logic_check TIMESTAMP WITH TIME ZONE,
+    last_logic_reason TEXT,
+    ical_url TEXT
+);
+
+-- Bookings Table
+CREATE TABLE IF NOT EXISTS bookings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    property_id UUID REFERENCES properties(id),
+    room_id UUID REFERENCES rooms(id),
+    user_id UUID,
+    guest_name TEXT NOT NULL,
+    guest_email TEXT,
+    guest_phone TEXT,
+    check_in DATE NOT NULL,
+    check_out DATE NOT NULL,
+    guests INTEGER,
+    total_paid DECIMAL(10, 2),
+    status VARCHAR(20) DEFAULT 'confirmed',
+    payment_status VARCHAR(20) DEFAULT 'paid',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    external_id VARCHAR(255),
+    source VARCHAR(50) DEFAULT 'direct',
+    channel VARCHAR(50) DEFAULT 'direct',
+    taxes_applied TEXT,
+    tax_total DECIMAL(10, 2) DEFAULT 0
+);
+
+-- 3. NEW FEATURES (TAILED UPDATES)
+
+-- Pricing Rules Table
+CREATE TABLE IF NOT EXISTS pricing_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('seasonal', 'occupancy', 'last_minute', 'weekend', 'custom')),
+    amount DECIMAL(10, 2) NOT NULL,
+    is_percentage BOOLEAN DEFAULT true,
+    start_date DATE,
+    end_date DATE,
+    days_of_week INTEGER[], -- 0=Sunday, 1=Monday, etc.
+    min_occupancy INTEGER,
+    priority INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Taxes Table (New Tax System)
 CREATE TABLE IF NOT EXISTS taxes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     property_id UUID REFERENCES properties(id) ON DELETE CASCADE,
@@ -32,12 +121,24 @@ CREATE TABLE IF NOT EXISTS taxes (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add tax fields to bookings
-ALTER TABLE bookings ADD COLUMN IF NOT EXISTS taxes_applied TEXT;
-ALTER TABLE bookings ADD COLUMN IF NOT EXISTS tax_total NUMERIC DEFAULT 0;
+-- Room Extras Table
+CREATE TABLE IF NOT EXISTS room_extras (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    quantity INTEGER DEFAULT 1,
+    charge_type VARCHAR(20) DEFAULT 'one-time', -- 'one-time' or 'per-night'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 
--- Create index for faster tax lookups
-CREATE INDEX IF NOT EXISTS idx_taxes_property ON taxes(property_id) WHERE is_active = true;`;
+-- 4. INDEXES
+CREATE INDEX IF NOT EXISTS idx_rooms_property ON rooms(property_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_property ON bookings(property_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_room ON bookings(room_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_dates ON bookings(check_in, check_out);
+CREATE INDEX IF NOT EXISTS idx_taxes_property ON taxes(property_id) WHERE is_active = true;
+`;
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(migrationSQL);
