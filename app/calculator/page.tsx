@@ -25,7 +25,7 @@ export default function CalculatorPage() {
     const [guestName, setGuestName] = useState('');
     const [guestEmail, setGuestEmail] = useState('');
     const [extras, setExtras] = useState<any[]>([]);
-    const [newExtra, setNewExtra] = useState({ name: '', price: '', quantity: 1 });
+    const [newExtra, setNewExtra] = useState({ name: '', price: '', quantity: 1, chargeType: 'one-time' });
     const [pricingRules, setPricingRules] = useState<any[]>([]);
     const [pricingMode, setPricingMode] = useState('auto');
     const [selectedRuleId, setSelectedRuleId] = useState('');
@@ -76,8 +76,13 @@ export default function CalculatorPage() {
 
     const addExtra = () => {
         if (newExtra.name && newExtra.price) {
-            setExtras([...extras, { ...newExtra, price: parseFloat(newExtra.price), id: Date.now() }]);
-            setNewExtra({ name: '', price: '', quantity: 1 });
+            setExtras([...extras, {
+                ...newExtra,
+                price: parseFloat(newExtra.price),
+                id: Date.now(),
+                chargeType: newExtra.chargeType || 'one-time'
+            }]);
+            setNewExtra({ name: '', price: '', quantity: 1, chargeType: 'one-time' });
         }
     };
 
@@ -174,7 +179,10 @@ export default function CalculatorPage() {
         });
     }
 
-    const extrasTotal = extras.reduce((sum, e) => sum + (e.price * e.quantity * nights), 0);
+    const extrasTotal = extras.reduce((sum, e) => {
+        const baseAmount = e.price * e.quantity;
+        return sum + (e.chargeType === 'per-night' ? baseAmount * nights : baseAmount);
+    }, 0);
     const subtotal = baseRoomTotal + adjustmentsTotal + extrasTotal;
     const tax = subtotal * 0.1; // 10% tax
     const total = subtotal + tax;
@@ -386,7 +394,7 @@ export default function CalculatorPage() {
                         <Card className="glass-card">
                             <CardHeader>
                                 <CardTitle>Add Extras</CardTitle>
-                                <CardDescription>Optional services (charged per night)</CardDescription>
+                                <CardDescription>Optional services and items</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-3">
@@ -395,7 +403,11 @@ export default function CalculatorPage() {
                                             <div className="flex-1">
                                                 <p className="font-medium">{extra.name}</p>
                                                 <p className="text-sm text-muted-foreground">
-                                                    ${extra.price} × {extra.quantity} × {nights} nights = ${(extra.price * extra.quantity * nights).toFixed(2)}
+                                                    ${extra.price} × {extra.quantity}{extra.chargeType === 'per-night' ? ` × ${nights} nights` : ' (one-time)'} = ${(
+                                                        extra.chargeType === 'per-night'
+                                                            ? extra.price * extra.quantity * nights
+                                                            : extra.price * extra.quantity
+                                                    ).toFixed(2)}
                                                 </p>
                                             </div>
                                             <Button
@@ -420,6 +432,18 @@ export default function CalculatorPage() {
                                         value={newExtra.price}
                                         onChange={(e) => setNewExtra({ ...newExtra, price: e.target.value })}
                                     />
+                                    <Select
+                                        value={newExtra.chargeType}
+                                        onValueChange={(v) => setNewExtra({ ...newExtra, chargeType: v })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="one-time">One-time</SelectItem>
+                                            <SelectItem value="per-night">Per Night</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <Button onClick={addExtra} variant="outline" className="w-full">
                                         <Plus className="h-4 w-4 mr-1" />
                                         Add
