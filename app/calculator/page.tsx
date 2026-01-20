@@ -552,7 +552,7 @@ export default function CalculatorPage() {
                                         <div className="border-b pb-4 mb-4 space-y-2">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <p className="font-bold text-lg">{selectedRoom.name || `Room ${selectedRoom.id?.slice(0, 8)}`}</p>
+                                                    <p className="font-bold text-lg">{selectedRoom.name || `Room ${String(selectedRoom.id || '').slice(0, 8) || 'Unknown'}`}</p>
                                                     <p className="text-sm text-muted-foreground">{selectedRoom.type}</p>
                                                 </div>
                                                 <div className="text-right">

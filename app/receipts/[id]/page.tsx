@@ -169,7 +169,7 @@ export default function ReceiptPage() {
                                 <div className="space-y-1 text-sm">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <p className="font-bold text-lg">{booking.room_name || `Room ${booking.room_id.slice(0, 8)}`}</p>
+                                            <p className="font-bold text-lg">{booking.room_name || `Room ${booking.room_id?.slice(0, 8) || 'Unknown'}`}</p>
                                             <p className="text-sm text-muted-foreground">{booking.room_type}</p>
                                         </div>
                                     </div>
