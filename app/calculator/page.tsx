@@ -548,6 +548,51 @@ export default function CalculatorPage() {
                             <CardContent className="space-y-4">
                                 {selectedRoom && nights > 0 ? (
                                     <>
+                                        {/* Room & Guest Info Header */}
+                                        <div className="border-b pb-4 mb-4 space-y-2">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="font-bold text-lg">{selectedRoom.name || `Room ${selectedRoom.id?.slice(0, 8)}`}</p>
+                                                    <p className="text-sm text-muted-foreground">{selectedRoom.type}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-sm font-semibold text-primary">${Number(selectedRoom.current_price).toFixed(2)}/night</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                <span className="flex items-center gap-1">
+                                                    <span className="font-medium text-foreground">{guests}</span> Guest{guests > 1 ? 's' : ''}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <span className="font-medium text-foreground">{nights}</span> Night{nights > 1 ? 's' : ''}
+                                                </span>
+                                            </div>
+                                            {/* Amenities */}
+                                            {selectedRoom.amenities && (() => {
+                                                try {
+                                                    const amns = typeof selectedRoom.amenities === 'string'
+                                                        ? JSON.parse(selectedRoom.amenities)
+                                                        : selectedRoom.amenities;
+                                                    if (Array.isArray(amns) && amns.length > 0) {
+                                                        return (
+                                                            <div className="flex flex-wrap gap-1 pt-2">
+                                                                {amns.slice(0, 5).map((a: string) => (
+                                                                    <span key={a} className="text-[10px] bg-secondary/30 px-1.5 py-0.5 rounded">
+                                                                        {a}
+                                                                    </span>
+                                                                ))}
+                                                                {amns.length > 5 && (
+                                                                    <span className="text-[10px] text-muted-foreground">+{amns.length - 5} more</span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    }
+                                                } catch { }
+                                                return null;
+                                            })()}
+                                        </div>
+
+                                        {/* Price Breakdown */}
                                         <div className="space-y-3 pb-4 border-b">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Room ({nights} nights)</span>

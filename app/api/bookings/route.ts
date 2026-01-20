@@ -13,7 +13,7 @@ export async function GET(request: Request) {
         if (id) {
             // Fetch single booking with room and property details
             const { rows } = await sql`
-                SELECT b.*, r.type as room_type, r.amenities as room_amenities, r.property_id, p.name as property_name, p.address
+                SELECT b.*, r.name as room_name, r.type as room_type, r.amenities as room_amenities, r.property_id, p.name as property_name, p.address
                 FROM bookings b
                 JOIN rooms r ON b.room_id = r.id
                 JOIN properties p ON r.property_id = p.id
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 
             if (property_id && property_id !== 'all') {
                 query = sql`
-                    SELECT b.*, r.type as room_type, r.property_id, p.name as property_name
+                    SELECT b.*, r.name as room_name, r.type as room_type, r.property_id, p.name as property_name
                     FROM bookings b
                     JOIN rooms r ON b.room_id = r.id
                     JOIN properties p ON r.property_id = p.id
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
                 `;
             } else {
                 query = sql`
-                    SELECT b.*, r.type as room_type, r.property_id, p.name as property_name
+                    SELECT b.*, r.name as room_name, r.type as room_type, r.property_id, p.name as property_name
                     FROM bookings b
                     JOIN rooms r ON b.room_id = r.id
                     JOIN properties p ON r.property_id = p.id
