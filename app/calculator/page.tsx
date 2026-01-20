@@ -240,16 +240,10 @@ export default function CalculatorPage() {
                     guest_email: guestEmail,
                     check_in: checkIn,
                     check_out: checkOut,
-                    total_price: total,
-                    status: 'confirmed',
-                    taxes_applied: JSON.stringify(taxBreakdown),
-                    guest_name: guestName,
-                    guest_email: guestEmail,
-                    check_in: checkIn,
-                    check_out: checkOut,
                     guests: guests,
                     total_price: total,
                     status: 'confirmed',
+                    taxes_applied: JSON.stringify(taxBreakdown),
                 })
             });
 
