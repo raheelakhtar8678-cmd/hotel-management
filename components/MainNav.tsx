@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { PropertySelector } from "./property-selector";
 import { GlobalSearch } from "./global-search";
-import { Building2, LayoutDashboard, Package, Settings, Calendar, FileText, Menu, X, Zap, Calculator, ClipboardList, Users } from "lucide-react";
+import { Building2, LayoutDashboard, Package, Settings, Calendar, FileText, Menu, X, Zap, Calculator, ClipboardList, Users, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 
 export function MainNav() {
     const pathname = usePathname();
+    const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const navItems = [
@@ -24,6 +25,12 @@ export function MainNav() {
         { href: "/reports", label: "Reports", icon: FileText },
         { href: "/settings", label: "Settings", icon: Settings },
     ];
+
+    const handleLogout = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        router.push('/login');
+        router.refresh();
+    };
 
     return (
         <header className="sticky top-0 z-50 w-full border-b border-primary/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -69,10 +76,19 @@ export function MainNav() {
                         })}
                     </nav>
 
-                    {/* Search (Desktop) */}
+                    {/* Search & Actions (Desktop) */}
                     <div className="hidden lg:flex items-center gap-3">
                         <GlobalSearch />
                         <PropertySelector />
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleLogout}
+                            className="text-muted-foreground hover:text-red-500"
+                            title="Logout"
+                        >
+                            <LogOut className="h-4 w-4" />
+                        </Button>
                     </div>
 
                     {/* Mobile Menu Button */}
