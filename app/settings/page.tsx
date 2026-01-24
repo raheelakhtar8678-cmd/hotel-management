@@ -732,29 +732,49 @@ CREATE TABLE IF NOT EXISTS pricing_rules (
                         {/* Webhook Endpoints Reference */}
                         <Card className="glass-card">
                             <CardHeader>
-                                <CardTitle className="text-lg">Available Webhook Endpoints</CardTitle>
-                                <CardDescription>Use these endpoints with your API key</CardDescription>
+                                <CardTitle className="text-lg">Your Webhook URLs</CardTitle>
+                                <CardDescription>
+                                    Copy these full URLs to use in n8n, Zapier, or Make.com
+                                </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-3 text-sm">
+                                <div className="mb-3 p-2 bg-primary/10 rounded text-sm">
+                                    <strong>Base URL:</strong>{" "}
+                                    <code className="bg-black/10 px-1 rounded">
+                                        {typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.vercel.app'}
+                                    </code>
+                                </div>
+                                <div className="space-y-2 text-sm">
                                     {[
                                         { method: "GET", path: "/api/webhooks/booking", desc: "List recent bookings" },
                                         { method: "POST", path: "/api/webhooks/booking", desc: "Create new booking" },
                                         { method: "GET", path: "/api/webhooks/availability", desc: "Check room availability" },
                                         { method: "GET", path: "/api/webhooks/rooms", desc: "List rooms with status" },
                                         { method: "GET", path: "/api/webhooks/revenue", desc: "Revenue summary" },
-                                    ].map((endpoint, i) => (
-                                        <div key={i} className="flex items-center gap-3 p-2 bg-secondary/10 rounded">
-                                            <Badge className={endpoint.method === "GET" ? "bg-emerald-500" : "bg-blue-500"}>
-                                                {endpoint.method}
-                                            </Badge>
-                                            <code className="font-mono text-xs flex-1">{endpoint.path}</code>
-                                            <span className="text-muted-foreground">{endpoint.desc}</span>
-                                        </div>
-                                    ))}
+                                    ].map((endpoint, i) => {
+                                        const fullUrl = (typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.vercel.app') + endpoint.path;
+                                        return (
+                                            <div key={i} className="flex items-center gap-2 p-2 bg-secondary/10 rounded group">
+                                                <Badge className={endpoint.method === "GET" ? "bg-emerald-500" : "bg-blue-500"}>
+                                                    {endpoint.method}
+                                                </Badge>
+                                                <code className="font-mono text-xs flex-1 truncate" title={fullUrl}>
+                                                    {fullUrl}
+                                                </code>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="opacity-50 group-hover:opacity-100"
+                                                    onClick={() => copyToClipboard(fullUrl)}
+                                                >
+                                                    <Copy className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                                 <div className="mt-4 p-3 bg-secondary/20 rounded text-xs text-muted-foreground">
-                                    <strong>Authentication:</strong> Include your API key as <code className="bg-black/20 px-1 rounded">Authorization: Bearer YOUR_KEY</code> or <code className="bg-black/20 px-1 rounded">X-API-Key: YOUR_KEY</code>
+                                    <strong>Authentication:</strong> Add header <code className="bg-black/20 px-1 rounded">Authorization: Bearer YOUR_API_KEY</code>
                                 </div>
                             </CardContent>
                         </Card>
