@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Database, Copy, CheckCircle2, Settings as SettingsIcon, Percent, Trash2, Plus } from "lucide-react";
+import { Database, Copy, CheckCircle2, Settings as SettingsIcon, Percent, Trash2, Plus, Key, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState("migration");
@@ -24,8 +25,18 @@ export default function SettingsPage() {
         applies_to: "total"
     });
 
+    // API Keys State
+    const [apiKeys, setApiKeys] = useState<any[]>([]);
+    const [newKeyName, setNewKeyName] = useState("");
+    const [newKeyPermissions, setNewKeyPermissions] = useState<string[]>(["read"]);
+    const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+    const [showKey, setShowKey] = useState(false);
+    const [needsMigration, setNeedsMigration] = useState(false);
+    const [migrationSql, setMigrationSql] = useState("");
+
     useEffect(() => {
         fetchProperties();
+        fetchApiKeys();
     }, []);
 
     useEffect(() => {
@@ -90,6 +101,59 @@ export default function SettingsPage() {
             fetchTaxes(selectedProperty);
         } catch (e) {
             console.error("Error deleting tax", e);
+        }
+    };
+
+    // API Key Functions
+    const fetchApiKeys = async () => {
+        try {
+            const res = await fetch("/api/api-keys");
+            const data = await res.json();
+            if (data.keys) setApiKeys(data.keys);
+            if (data.needsMigration) {
+                setNeedsMigration(true);
+                setMigrationSql(data.migrationSql || "");
+            }
+        } catch (e) {
+            console.error("Error fetching API keys", e);
+        }
+    };
+
+    const handleCreateApiKey = async () => {
+        if (!newKeyName.trim()) {
+            alert("Please enter a name for the API key");
+            return;
+        }
+        try {
+            const res = await fetch("/api/api-keys", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: newKeyName,
+                    permissions: newKeyPermissions
+                })
+            });
+            const data = await res.json();
+            if (data.success && data.key) {
+                setGeneratedKey(data.key.apiKey);
+                setShowKey(true);
+                setNewKeyName("");
+                fetchApiKeys();
+            } else {
+                alert(data.error || "Failed to create API key");
+            }
+        } catch (e) {
+            console.error("Error creating API key", e);
+        }
+    };
+
+    const handleDeleteApiKey = async (id: string) => {
+        if (!confirm("Are you sure you want to revoke this API key? This cannot be undone.")) return;
+        try {
+            await fetch(`/api/api-keys?id=${id}`, { method: "DELETE" });
+            fetchApiKeys();
+        } catch (e) {
+            console.error("Error deleting API key", e);
         }
     };
 
@@ -303,6 +367,15 @@ CREATE TABLE IF NOT EXISTS pricing_rules (
                         <SettingsIcon className="h-4 w-4" /> Images
                     </div>
                 </button>
+                <button
+                    onClick={() => setActiveTab("apikeys")}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "apikeys" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Key className="h-4 w-4" /> API Keys
+                    </div>
+                </button>
             </div>
 
 
@@ -486,6 +559,206 @@ CREATE TABLE IF NOT EXISTS pricing_rules (
                             </div>
                         </CardContent>
                     </Card>
+                )}
+
+                {/* API Keys Tab */}
+                {activeTab === "apikeys" && (
+                    <div className="space-y-6">
+                        {/* Info Banner */}
+                        <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+                            <div className="flex items-start gap-3">
+                                <Key className="h-5 w-5 text-primary mt-0.5" />
+                                <div>
+                                    <h4 className="font-semibold text-primary">Webhook API Keys</h4>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Generate API keys to allow external tools (n8n, Zapier, Make.com) to interact with your property management system.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Migration Warning */}
+                        {needsMigration && (
+                            <Card className="border-yellow-500/50 bg-yellow-500/10">
+                                <CardHeader>
+                                    <div className="flex items-center gap-2">
+                                        <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                                        <CardTitle className="text-yellow-600">Database Migration Required</CardTitle>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm mb-4">Run this SQL in your Neon database to enable API keys:</p>
+                                    <div className="relative">
+                                        <pre className="text-xs bg-black/40 p-3 rounded overflow-x-auto text-muted-foreground">
+                                            <code>{migrationSql}</code>
+                                        </pre>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="absolute top-2 right-2"
+                                            onClick={() => copyToClipboard(migrationSql)}
+                                        >
+                                            <Copy className="h-3 w-3 mr-1" /> Copy
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Generated Key Display */}
+                        {generatedKey && (
+                            <Card className="border-emerald-500/50 bg-emerald-500/10">
+                                <CardHeader>
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                        <CardTitle className="text-emerald-600">API Key Generated!</CardTitle>
+                                    </div>
+                                    <CardDescription>Save this key now - it won't be shown again!</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex items-center gap-2 bg-black/20 p-3 rounded font-mono text-sm">
+                                        <code className="flex-1 break-all">
+                                            {showKey ? generatedKey : generatedKey.replace(/./g, '•')}
+                                        </code>
+                                        <Button variant="ghost" size="sm" onClick={() => setShowKey(!showKey)}>
+                                            {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(generatedKey)}>
+                                            <Copy className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        className="mt-4"
+                                        onClick={() => setGeneratedKey(null)}
+                                    >
+                                        I've saved my key
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Create New Key */}
+                        <Card className="glass-card">
+                            <CardHeader>
+                                <CardTitle className="text-lg">Create New API Key</CardTitle>
+                                <CardDescription>Generate a key for external integrations</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid md:grid-cols-3 gap-4 items-end">
+                                    <div className="space-y-2">
+                                        <Label>Key Name</Label>
+                                        <Input
+                                            placeholder="e.g. n8n Integration"
+                                            value={newKeyName}
+                                            onChange={(e) => setNewKeyName(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Permissions</Label>
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                            value={newKeyPermissions.includes("write") ? "readwrite" : "read"}
+                                            onChange={(e) => setNewKeyPermissions(
+                                                e.target.value === "readwrite"
+                                                    ? ["read", "write"]
+                                                    : ["read"]
+                                            )}
+                                        >
+                                            <option value="read">Read Only</option>
+                                            <option value="readwrite">Read & Write</option>
+                                        </select>
+                                    </div>
+                                    <Button
+                                        className="bg-gradient-primary"
+                                        onClick={handleCreateApiKey}
+                                        disabled={needsMigration}
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" /> Generate Key
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Existing Keys */}
+                        <Card className="glass-card">
+                            <CardHeader>
+                                <CardTitle className="text-lg">Active API Keys</CardTitle>
+                                <CardDescription>Manage your existing integration keys</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {apiKeys.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                                        No API keys created yet.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {apiKeys.map(key => (
+                                            <div
+                                                key={key.id}
+                                                className="flex items-center justify-between p-4 bg-secondary/20 rounded-lg border"
+                                            >
+                                                <div>
+                                                    <div className="font-semibold flex items-center gap-2">
+                                                        {key.name}
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {key.permissions?.includes("write") ? "Read/Write" : "Read Only"}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground mt-1">
+                                                        Created: {new Date(key.created_at).toLocaleDateString()}
+                                                        {key.last_used_at && (
+                                                            <span className="ml-3">
+                                                                Last used: {new Date(key.last_used_at).toLocaleDateString()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-red-500 hover:text-red-700 hover:bg-red-500/10"
+                                                    onClick={() => handleDeleteApiKey(key.id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Webhook Endpoints Reference */}
+                        <Card className="glass-card">
+                            <CardHeader>
+                                <CardTitle className="text-lg">Available Webhook Endpoints</CardTitle>
+                                <CardDescription>Use these endpoints with your API key</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-3 text-sm">
+                                    {[
+                                        { method: "GET", path: "/api/webhooks/booking", desc: "List recent bookings" },
+                                        { method: "POST", path: "/api/webhooks/booking", desc: "Create new booking" },
+                                        { method: "GET", path: "/api/webhooks/availability", desc: "Check room availability" },
+                                        { method: "GET", path: "/api/webhooks/rooms", desc: "List rooms with status" },
+                                        { method: "GET", path: "/api/webhooks/revenue", desc: "Revenue summary" },
+                                    ].map((endpoint, i) => (
+                                        <div key={i} className="flex items-center gap-3 p-2 bg-secondary/10 rounded">
+                                            <Badge className={endpoint.method === "GET" ? "bg-emerald-500" : "bg-blue-500"}>
+                                                {endpoint.method}
+                                            </Badge>
+                                            <code className="font-mono text-xs flex-1">{endpoint.path}</code>
+                                            <span className="text-muted-foreground">{endpoint.desc}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-4 p-3 bg-secondary/20 rounded text-xs text-muted-foreground">
+                                    <strong>Authentication:</strong> Include your API key as <code className="bg-black/20 px-1 rounded">Authorization: Bearer YOUR_KEY</code> or <code className="bg-black/20 px-1 rounded">X-API-Key: YOUR_KEY</code>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 )}
             </div>
         </div>

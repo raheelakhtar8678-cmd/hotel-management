@@ -22,7 +22,14 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, RotateCcw, Calendar, DollarSign, AlertTriangle, Eye, Users, Building2, CreditCard, ExternalLink } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { RefreshCw, RotateCcw, Calendar, DollarSign, AlertTriangle, Eye, Users, Building2, CreditCard, ExternalLink, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { exportBookingsToCSV, exportBookingsToXLSX } from "@/lib/export";
 
 interface Booking {
     id: string;
@@ -173,14 +180,38 @@ export default function BookingsPage() {
 
     return (
         <div className="flex-1 space-y-6 p-8 pt-6">
-            <div>
-                <h2 className="text-3xl font-bold tracking-tight gradient-text flex items-center gap-2">
-                    <Calendar className="h-8 w-8" />
-                    Bookings
-                </h2>
-                <p className="text-muted-foreground mt-1">
-                    View and manage all bookings, process refunds
-                </p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-3xl font-bold tracking-tight gradient-text flex items-center gap-2">
+                        <Calendar className="h-8 w-8" />
+                        Bookings
+                    </h2>
+                    <p className="text-muted-foreground mt-1">
+                        View and manage all bookings, process refunds
+                    </p>
+                </div>
+
+                {/* Export Dropdown */}
+                {bookings.length > 0 && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="gap-2">
+                                <Download className="h-4 w-4" />
+                                Export
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => exportBookingsToCSV(bookings)}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Export as CSV
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => exportBookingsToXLSX(bookings)}>
+                                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                                Export as Excel
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
             </div>
 
             {/* Summary Cards */}

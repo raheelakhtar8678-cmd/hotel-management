@@ -11,6 +11,17 @@ export const revalidate = 0; // Disable cache for real-time data
 
 import { cookies } from 'next/headers';
 
+// Format large numbers compactly (e.g., 256777 -> $256.8K)
+function formatCompactCurrency(value: number): string {
+  if (Math.abs(value) >= 1000000) {
+    return `$${(value / 1000000).toFixed(1)}M`;
+  } else if (Math.abs(value) >= 10000) {
+    return `$${(value / 1000).toFixed(1)}K`;
+  } else {
+    return `$${value.toLocaleString()}`;
+  }
+}
+
 export default async function Dashboard() {
   const cookieStore = await cookies();
   const propertyId = cookieStore.get('yieldvibe_property_id')?.value;
@@ -142,35 +153,41 @@ export default async function Dashboard() {
         <div className="space-y-6">
           {/* KPI Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Card className="glass-card hover-glow transition-smooth">
+            <Card className="glass-card hover-glow transition-smooth overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Net Revenue</CardTitle>
-                <DollarSign className="h-5 w-5 text-primary" />
+                <CardTitle className="text-sm font-medium truncate">Net Revenue</CardTitle>
+                <DollarSign className="h-5 w-5 text-primary flex-shrink-0" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl lg:text-2xl font-bold break-words">${netRevenue.toLocaleString()}</div>
+                <div className="text-xl lg:text-2xl font-bold truncate" title={`$${netRevenue.toLocaleString()}`}>
+                  {formatCompactCurrency(netRevenue)}
+                </div>
                 <p className="text-xs text-muted-foreground">After {refundCount} refunds</p>
               </CardContent>
             </Card>
 
-            <Card className="glass-card hover-glow transition-smooth">
+            <Card className="glass-card hover-glow transition-smooth overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Refunds</CardTitle>
-                <RotateCcw className="h-5 w-5 text-red-500" />
+                <CardTitle className="text-sm font-medium truncate">Total Refunds</CardTitle>
+                <RotateCcw className="h-5 w-5 text-red-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl lg:text-2xl font-bold text-red-500 break-words">-${totalRefunds.toLocaleString()}</div>
+                <div className="text-xl lg:text-2xl font-bold text-red-500 truncate" title={`-$${totalRefunds.toLocaleString()}`}>
+                  -{formatCompactCurrency(totalRefunds)}
+                </div>
                 <p className="text-xs text-muted-foreground">{refundCount} booking{refundCount !== 1 ? 's' : ''} refunded</p>
               </CardContent>
             </Card>
 
-            <Card className="glass-card hover-glow transition-smooth">
+            <Card className="glass-card hover-glow transition-smooth overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Revenue Lift</CardTitle>
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
+                <CardTitle className="text-sm font-medium truncate">Revenue Lift</CardTitle>
+                <TrendingUp className="h-5 w-5 text-emerald-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl lg:text-2xl font-bold text-emerald-500 break-words">+${revenueLift.toLocaleString()}</div>
+                <div className="text-xl lg:text-2xl font-bold text-emerald-500 truncate" title={`+$${revenueLift.toLocaleString()}`}>
+                  +{formatCompactCurrency(revenueLift)}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {liftVal > 0 ? '+' : ''}{liftPercentage}% over base price
                 </p>

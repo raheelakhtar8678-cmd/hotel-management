@@ -1,5 +1,6 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
+import { sendBookingConfirmation, isEmailConfigured } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,9 +115,38 @@ export async function POST(request: Request) {
         // Update room status to occupied
         await sql`UPDATE rooms SET status = 'occupied' WHERE id = ${room_id}`;
 
+        // Send email notification (non-blocking)
+        if (guest_email && isEmailConfigured()) {
+            // Get room and property info for email
+            const { rows: roomInfo } = await sql`
+                SELECT r.name as room_name, r.type as room_type, p.name as property_name
+                FROM rooms r
+                JOIN properties p ON r.property_id = p.id
+                WHERE r.id = ${room_id}
+            `;
+
+            const checkInDate = new Date(check_in);
+            const checkOutDate = new Date(check_out);
+            const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            // Send email asynchronously (don't wait for result)
+            sendBookingConfirmation({
+                guestName: guest_name,
+                guestEmail: guest_email,
+                propertyName: roomInfo[0]?.property_name || 'Our Property',
+                roomName: roomInfo[0]?.room_name || roomInfo[0]?.room_type || 'Your Room',
+                checkIn: checkInDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+                checkOut: checkOutDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+                totalPaid: total_price || 0,
+                nights: nights,
+                bookingId: booking.id
+            }).catch(err => console.error('Email send failed:', err));
+        }
+
         return NextResponse.json({
             success: true,
-            booking
+            booking,
+            emailSent: guest_email && isEmailConfigured()
         });
     } catch (error) {
         console.error('Error creating booking:', error);
