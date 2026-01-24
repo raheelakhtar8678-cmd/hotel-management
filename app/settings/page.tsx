@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Database, Copy, CheckCircle2, Settings as SettingsIcon, Percent, Trash2, Plus, Key, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { Database, Copy, CheckCircle2, Settings as SettingsIcon, Percent, Trash2, Plus, Key, Eye, EyeOff, AlertTriangle, Lock, Globe, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
@@ -374,6 +374,24 @@ CREATE TABLE IF NOT EXISTS pricing_rules (
                 >
                     <div className="flex items-center gap-2">
                         <Key className="h-4 w-4" /> API Keys
+                    </div>
+                </button>
+                <button
+                    onClick={() => setActiveTab("auth")}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "auth" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Lock className="h-4 w-4" /> Admin Auth
+                    </div>
+                </button>
+                <button
+                    onClick={() => setActiveTab("booking")}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "booking" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                        }`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4" /> Direct Booking
                     </div>
                 </button>
             </div>
@@ -775,6 +793,216 @@ CREATE TABLE IF NOT EXISTS pricing_rules (
                                 </div>
                                 <div className="mt-4 p-3 bg-secondary/20 rounded text-xs text-muted-foreground">
                                     <strong>Authentication:</strong> Add header <code className="bg-black/20 px-1 rounded">Authorization: Bearer YOUR_API_KEY</code>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {/* Admin Auth Tab */}
+                {activeTab === "auth" && (
+                    <div className="space-y-6">
+                        <Card className="glass-card">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Lock className="h-5 w-5 text-primary" />
+                                    Admin Password Protection
+                                </CardTitle>
+                                <CardDescription>
+                                    Protect your admin dashboard with a password
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                                    <h4 className="font-medium text-amber-600 flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        Setup Required
+                                    </h4>
+                                    <p className="text-sm text-muted-foreground mb-3">
+                                        Set the <code className="bg-secondary px-1 rounded">ADMIN_PASSWORD</code> environment variable in Vercel to enable authentication.
+                                    </p>
+                                    <div className="bg-secondary/50 rounded p-3 font-mono text-sm">
+                                        ADMIN_PASSWORD=your-secret-password
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <h4 className="font-medium">How It Works</h4>
+                                    <ul className="space-y-2 text-sm text-muted-foreground">
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                                            Admin pages (dashboard, bookings, settings) redirect to <code className="bg-secondary px-1 rounded">/login</code>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                                            Session persists for 7 days in a secure HTTP-only cookie
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                                            Logout button in the navigation header
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <h4 className="font-medium">Protected Routes</h4>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div className="bg-secondary/50 rounded p-2">🔒 / (Dashboard)</div>
+                                        <div className="bg-secondary/50 rounded p-2">🔒 /bookings</div>
+                                        <div className="bg-secondary/50 rounded p-2">🔒 /properties</div>
+                                        <div className="bg-secondary/50 rounded p-2">🔒 /settings</div>
+                                        <div className="bg-secondary/50 rounded p-2">🔒 /inventory</div>
+                                        <div className="bg-secondary/50 rounded p-2">🔒 /reports</div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <h4 className="font-medium">Public Routes (No Login)</h4>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div className="bg-emerald-500/10 rounded p-2">🌍 /login</div>
+                                        <div className="bg-emerald-500/10 rounded p-2">🌍 /book/*</div>
+                                        <div className="bg-emerald-500/10 rounded p-2">🌍 /api/webhooks/*</div>
+                                        <div className="bg-emerald-500/10 rounded p-2">🌍 /api/public/*</div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {/* Direct Booking Tab */}
+                {activeTab === "booking" && (
+                    <div className="space-y-6">
+                        <Card className="glass-card">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Globe className="h-5 w-5 text-primary" />
+                                    Direct Booking Pages
+                                </CardTitle>
+                                <CardDescription>
+                                    Allow guests to book directly - save on OTA commissions!
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                                    <h4 className="font-medium text-emerald-600 mb-2">💰 Save 3-15% on Fees</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                        Direct bookings skip Airbnb, Booking.com, and VRBO commissions.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <h4 className="font-medium">Your Booking URLs</h4>
+                                    <div className="space-y-2">
+                                        {properties.length === 0 ? (
+                                            <p className="text-sm text-muted-foreground">No properties found. Create a property first.</p>
+                                        ) : (
+                                            properties.map((prop) => (
+                                                <div key={prop.id} className="flex items-center gap-2 p-3 bg-secondary/50 rounded-lg group">
+                                                    <div className="flex-1">
+                                                        <p className="font-medium text-sm">{prop.name}</p>
+                                                        <code className="text-xs text-muted-foreground">
+                                                            {typeof window !== 'undefined' ? window.location.origin : ''}/book/{prop.slug || prop.id}
+                                                        </code>
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => window.open(`/book/${prop.slug || prop.id}`, '_blank')}
+                                                    >
+                                                        <ExternalLink className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => copyToClipboard(`${window.location.origin}/book/${prop.slug || prop.id}`)}
+                                                    >
+                                                        <Copy className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <h4 className="font-medium">How It Works</h4>
+                                    <ul className="space-y-2 text-sm text-muted-foreground">
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                                            Guests see property details, rooms, and pricing
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                                            They select dates and submit an inquiry form
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                                            You receive the inquiry via email (if configured)
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
+                                            No login required for guests - frictionless experience
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                                    <h4 className="font-medium text-amber-600 flex items-center gap-2 mb-2">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        Database Migration Required
+                                    </h4>
+                                    <p className="text-sm text-muted-foreground mb-3">
+                                        Run this SQL in Neon to enable direct booking:
+                                    </p>
+                                    <div className="bg-black/20 rounded p-3 font-mono text-xs overflow-x-auto">
+                                        {`-- Add slug column to properties
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS slug VARCHAR(255);
+UPDATE properties SET slug = LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]+', '-', 'g')) WHERE slug IS NULL;
+
+-- Create booking inquiries table
+CREATE TABLE IF NOT EXISTS booking_inquiries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    property_id UUID NOT NULL REFERENCES properties(id),
+    room_id UUID REFERENCES rooms(id),
+    guest_name VARCHAR(255) NOT NULL,
+    guest_email VARCHAR(255) NOT NULL,
+    guest_phone VARCHAR(50),
+    check_in DATE NOT NULL,
+    check_out DATE NOT NULL,
+    guests INTEGER DEFAULT 1,
+    message TEXT,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT NOW()
+);`}
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="mt-3"
+                                        onClick={() => copyToClipboard(`-- Add slug column to properties
+ALTER TABLE properties ADD COLUMN IF NOT EXISTS slug VARCHAR(255);
+UPDATE properties SET slug = LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]+', '-', 'g')) WHERE slug IS NULL;
+
+-- Create booking inquiries table
+CREATE TABLE IF NOT EXISTS booking_inquiries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    property_id UUID NOT NULL REFERENCES properties(id),
+    room_id UUID REFERENCES rooms(id),
+    guest_name VARCHAR(255) NOT NULL,
+    guest_email VARCHAR(255) NOT NULL,
+    guest_phone VARCHAR(50),
+    check_in DATE NOT NULL,
+    check_out DATE NOT NULL,
+    guests INTEGER DEFAULT 1,
+    message TEXT,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT NOW()
+);`)}
+                                    >
+                                        <Copy className="h-4 w-4 mr-2" />
+                                        Copy SQL
+                                    </Button>
                                 </div>
                             </CardContent>
                         </Card>
