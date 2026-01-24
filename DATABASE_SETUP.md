@@ -139,4 +139,4 @@ VALUES ('Seaside Villa', 150.00, 100.00, 300.00);
 -- Insert a test room (Use the ID from above)
 -- INSERT INTO rooms (property_id, type, status, current_price) VALUES ('<property_id_here>', 'Deluxe Suite', 'available', 150.00);
 ```
- fo
+ fo today

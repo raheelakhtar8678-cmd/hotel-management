@@ -22,7 +22,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, RotateCcw, Calendar, DollarSign, AlertTriangle } from "lucide-react";
+import { RefreshCw, RotateCcw, Calendar, DollarSign, AlertTriangle, Eye, Users, Building2, CreditCard, ExternalLink } from "lucide-react";
 
 interface Booking {
     id: string;
@@ -35,21 +35,32 @@ interface Booking {
     status: string;
     channel: string;
     room_type?: string;
+    room_name?: string;
     property_name?: string;
     refund_amount?: number;
     refund_reason?: string;
     refunded_at?: string;
     created_at: string;
+    guests?: number;
+    tax_total?: number;
+    taxes_applied?: string;
+    payment_method?: string;
 }
 
 export default function BookingsPage() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
     const [showRefundDialog, setShowRefundDialog] = useState(false);
+    const [showDetailsDialog, setShowDetailsDialog] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
     const [refundAmount, setRefundAmount] = useState('');
     const [refundReason, setRefundReason] = useState('');
     const [processing, setProcessing] = useState(false);
+
+    const openDetailsDialog = (booking: Booking) => {
+        setSelectedBooking(booking);
+        setShowDetailsDialog(true);
+    };
 
     useEffect(() => {
         fetchBookings();
@@ -231,7 +242,11 @@ export default function BookingsPage() {
                         </TableHeader>
                         <TableBody>
                             {bookings.map((booking) => (
-                                <TableRow key={booking.id}>
+                                <TableRow
+                                    key={booking.id}
+                                    className="cursor-pointer hover:bg-primary/5 transition-colors"
+                                    onClick={() => openDetailsDialog(booking)}
+                                >
                                     <TableCell>
                                         <div className="font-medium">{booking.guest_name}</div>
                                         {booking.guest_email && (
@@ -262,21 +277,29 @@ export default function BookingsPage() {
                                             <span className="text-muted-foreground">-</span>
                                         )}
                                     </TableCell>
-                                    <TableCell>
-                                        {booking.status === 'confirmed' && (!booking.refund_amount || Number(booking.refund_amount) === 0) && (
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex gap-2">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => openRefundDialog(booking)}
-                                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => openDetailsDialog(booking)}
+                                                className="text-primary hover:text-primary hover:bg-primary/10"
                                             >
-                                                <RotateCcw className="h-4 w-4 mr-1" />
-                                                Refund
+                                                <Eye className="h-4 w-4 mr-1" />
+                                                View
                                             </Button>
-                                        )}
-                                        {(booking.status === 'refunded' || (booking.refund_amount && Number(booking.refund_amount) > 0)) && (
-                                            <span className="text-xs text-muted-foreground">Refunded</span>
-                                        )}
+                                            {booking.status === 'confirmed' && (!booking.refund_amount || Number(booking.refund_amount) === 0) && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => openRefundDialog(booking)}
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                >
+                                                    <RotateCcw className="h-4 w-4 mr-1" />
+                                                    Refund
+                                                </Button>
+                                            )}
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -376,6 +399,150 @@ export default function BookingsPage() {
                             </div>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Booking Details Dialog */}
+            <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Calendar className="h-5 w-5 text-primary" />
+                            Booking Details
+                        </DialogTitle>
+                        <DialogDescription>
+                            View complete booking information
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {selectedBooking && (() => {
+                        const checkIn = new Date(selectedBooking.check_in);
+                        const checkOut = new Date(selectedBooking.check_out);
+                        const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+                        const totalPaid = Number(selectedBooking.total_paid) || 0;
+                        const taxTotal = Number(selectedBooking.tax_total) || 0;
+                        const subtotal = totalPaid - taxTotal;
+
+                        return (
+                            <div className="space-y-6">
+                                {/* Guest & Room Info Grid */}
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {/* Guest Details */}
+                                    <div className="bg-secondary/30 p-4 rounded-lg border">
+                                        <h3 className="font-semibold mb-3 flex items-center gap-2 text-primary">
+                                            <Users className="h-4 w-4" />
+                                            Guest Details
+                                        </h3>
+                                        <div className="space-y-2 text-sm">
+                                            <p className="font-bold text-lg">{selectedBooking.guest_name}</p>
+                                            {selectedBooking.guest_email && (
+                                                <p className="text-muted-foreground">{selectedBooking.guest_email}</p>
+                                            )}
+                                            <p className="text-muted-foreground">
+                                                {selectedBooking.guests || 1} Guest{(selectedBooking.guests || 1) > 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Room Details */}
+                                    <div className="bg-secondary/30 p-4 rounded-lg border">
+                                        <h3 className="font-semibold mb-3 flex items-center gap-2 text-primary">
+                                            <Building2 className="h-4 w-4" />
+                                            Room Details
+                                        </h3>
+                                        <div className="space-y-2 text-sm">
+                                            <p className="font-bold text-lg">{selectedBooking.property_name || 'Property'}</p>
+                                            <p className="text-muted-foreground">
+                                                {selectedBooking.room_name || selectedBooking.room_type || 'Room'}
+                                            </p>
+                                            <Badge variant="outline" className="mt-1">
+                                                {selectedBooking.channel || 'Direct'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Stay Dates */}
+                                <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+                                    <h3 className="font-semibold mb-3 flex items-center gap-2 text-primary">
+                                        <Calendar className="h-4 w-4" />
+                                        Stay Duration
+                                    </h3>
+                                    <div className="grid grid-cols-3 gap-4 text-center">
+                                        <div>
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Check-in</p>
+                                            <p className="font-semibold text-lg">{formatDate(selectedBooking.check_in)}</p>
+                                        </div>
+                                        <div className="flex items-center justify-center">
+                                            <div className="bg-primary/10 rounded-full px-3 py-1">
+                                                <span className="font-bold text-primary">{nights} Night{nights > 1 ? 's' : ''}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Check-out</p>
+                                            <p className="font-semibold text-lg">{formatDate(selectedBooking.check_out)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Payment Breakdown */}
+                                <div className="border rounded-lg p-4">
+                                    <h3 className="font-semibold mb-3 flex items-center gap-2 text-primary">
+                                        <CreditCard className="h-4 w-4" />
+                                        Payment Breakdown
+                                    </h3>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between py-1 border-b border-dashed">
+                                            <span>Room Charges ({nights} nights)</span>
+                                            <span className="font-medium">${subtotal.toFixed(2)}</span>
+                                        </div>
+                                        {taxTotal > 0 && (
+                                            <div className="flex justify-between py-1 text-muted-foreground">
+                                                <span>Taxes & Fees</span>
+                                                <span>+${taxTotal.toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between py-2 text-lg font-bold border-t">
+                                            <span>Total Paid</span>
+                                            <span className="text-primary">${totalPaid.toFixed(2)}</span>
+                                        </div>
+                                        {selectedBooking.refund_amount && Number(selectedBooking.refund_amount) > 0 && (
+                                            <div className="flex justify-between py-2 text-red-500 bg-red-50 rounded px-2 -mx-2">
+                                                <span>Refunded</span>
+                                                <span className="font-semibold">-${Number(selectedBooking.refund_amount).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Status & Actions */}
+                                <div className="flex items-center justify-between pt-2">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-sm text-muted-foreground">Status:</span>
+                                        {getStatusBadge(selectedBooking.status, selectedBooking.refund_amount)}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setShowDetailsDialog(false)}
+                                        >
+                                            Close
+                                        </Button>
+                                        <Button
+                                            onClick={() => {
+                                                setShowDetailsDialog(false);
+                                                window.location.href = `/receipts/${selectedBooking.id}`;
+                                            }}
+                                            className="bg-primary hover:bg-primary/90"
+                                        >
+                                            <ExternalLink className="h-4 w-4 mr-2" />
+                                            View Receipt
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </DialogContent>
             </Dialog>
         </div>

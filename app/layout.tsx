@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import { MainNav } from "@/components/MainNav";
 import { ToastProvider } from "@/components/toast-provider";
 
-const inter = Inter({ subsets: ["latin"] });
+const outfit = Outfit({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
   title: "YieldVibe | Revenue Management",
@@ -18,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-background antialiased`}>
+      <body className={`${outfit.className} min-h-screen bg-background antialiased`}>
         <div className="relative flex min-h-screen flex-col">
           <MainNav />
           <main className="flex-1">{children}</main>
