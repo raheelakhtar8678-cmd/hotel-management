@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
     Building2, MapPin, Users, Calendar, Wifi, Coffee,
     Car, Snowflake, Tv, CheckCircle2, Send, Loader2,
-    BedDouble, Star, ChevronRight
+    BedDouble, Star, ChevronRight, ArrowRight, ArrowLeft, History
 } from "lucide-react";
 
 interface Room {
@@ -204,6 +205,18 @@ export default function BookingPage() {
             </div>
 
             <div className="container mx-auto px-4 py-8 -mt-16 relative z-10">
+                {/* Navigation links */}
+                <div className="flex items-center justify-between mb-6">
+                    <Link href="/book" className="flex items-center gap-2 text-muted-foreground hover:text-foreground bg-white/80 backdrop-blur px-3 py-2 rounded-lg">
+                        <ArrowLeft className="h-4 w-4" />
+                        All Properties
+                    </Link>
+                    <Link href="/book/history" className="flex items-center gap-2 text-muted-foreground hover:text-foreground bg-white/80 backdrop-blur px-3 py-2 rounded-lg">
+                        <History className="h-4 w-4" />
+                        My Bookings
+                    </Link>
+                </div>
+
                 <div className="grid lg:grid-cols-3 gap-8">
                     {/* Rooms List */}
                     <div className="lg:col-span-2 space-y-4">
@@ -220,8 +233,8 @@ export default function BookingPage() {
                                 <Card
                                     key={room.id}
                                     className={`cursor-pointer transition-all hover:shadow-lg ${selectedRoom === room.id
-                                            ? 'ring-2 ring-primary shadow-lg'
-                                            : ''
+                                        ? 'ring-2 ring-primary shadow-lg'
+                                        : ''
                                         }`}
                                     onClick={() => setSelectedRoom(room.id)}
                                 >
@@ -277,12 +290,25 @@ export default function BookingPage() {
                                                 ))}
                                             </div>
 
-                                            {selectedRoom === room.id && (
-                                                <div className="mt-3 flex items-center text-primary text-sm font-medium">
-                                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                                    Selected
-                                                </div>
-                                            )}
+                                            {/* Action buttons */}
+                                            <div className="mt-3 flex items-center justify-between">
+                                                {selectedRoom === room.id ? (
+                                                    <div className="flex items-center text-primary text-sm font-medium">
+                                                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                                                        Selected
+                                                    </div>
+                                                ) : (
+                                                    <div></div>
+                                                )}
+                                                <Link
+                                                    href={`/book/${slug}/${room.id}`}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <Button size="sm" variant="outline" className="text-xs">
+                                                        View Details <ArrowRight className="h-3 w-3 ml-1" />
+                                                    </Button>
+                                                </Link>
+                                            </div>
                                         </div>
                                     </div>
                                 </Card>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { PropertySelector } from "./property-selector";
 import { GlobalSearch } from "./global-search";
-import { Building2, LayoutDashboard, Package, Settings, Calendar, FileText, Menu, X, Zap, Calculator, ClipboardList, Users, LogOut } from "lucide-react";
+import { Building2, LayoutDashboard, Package, Settings, Calendar, FileText, Menu, X, Zap, Calculator, ClipboardList, Users, LogOut, Globe } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 
@@ -23,6 +23,7 @@ export function MainNav() {
         { href: "/calendar", label: "Calendar", icon: Calendar },
         { href: "/staff", label: "Staff", icon: Users },
         { href: "/reports", label: "Reports", icon: FileText },
+        { href: "/book", label: "Public Book", icon: Globe },
         { href: "/settings", label: "Settings", icon: Settings },
     ];
 
