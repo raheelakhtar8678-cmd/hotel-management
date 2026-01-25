@@ -90,12 +90,13 @@ export default function StaffPage() {
                 fetch('/api/rooms?all=true') // Assuming existing API supports listing all or we need to fix
             ]);
 
-            // Rooms API might need property query, or we fetch for all.
-            // If /api/rooms doesn't support 'all', we might need to fetch per property or update API.
-            // Let's assume /api/rooms supports fetching for valid property.
-            // Actually, usually /api/rooms?property_id=... is used.
-            // For now, let's fetch properties first, then we can fetch rooms dynamically or strict to property context.
-            // Simplified: Fetch properties. When adding, if property selected, fetch rooms for that property.
+            // Check responses
+            if (!staffRes.ok) {
+                throw new Error(`Staff fetch failed: ${staffRes.status}`);
+            }
+            if (!propsRes.ok) {
+                throw new Error(`Properties fetch failed: ${propsRes.status}`);
+            }
 
             const staffData = await staffRes.json();
             const propsData = await propsRes.json();
@@ -113,6 +114,9 @@ export default function StaffPage() {
     const fetchRoomsForProperty = async (propertyId: string) => {
         try {
             const res = await fetch(`/api/rooms?property_id=${propertyId}`);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             if (data.success) {
                 setRooms(data.rooms);
@@ -167,11 +171,17 @@ export default function StaffPage() {
         if (!confirm('Are you sure you want to remove this staff member?')) return;
         try {
             const res = await fetch(`/api/staff?id=${id}`, { method: 'DELETE' });
-            if (res.ok) {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            const data = await res.json();
+            if (data.success) {
                 setStaffList(staffList.filter(s => s.id !== id));
+            } else {
+                alert(data.error || 'Failed to delete staff member');
             }
         } catch (error) {
-            alert('Failed to delete');
+            alert('Failed to delete staff member');
         }
     };
 

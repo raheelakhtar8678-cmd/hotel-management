@@ -17,23 +17,66 @@ import { Calculator as CalcIcon, Plus, X, FileText, Settings2 } from "lucide-rea
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+interface Property {
+    id: string;
+    name: string;
+    base_price: number;
+    is_active: boolean;
+}
+
+interface Room {
+    id: string;
+    name?: string;
+    type: string;
+    current_price: number;
+    property_id: string;
+    status?: string;
+    amenities?: string;
+}
+
+interface Extra {
+    id: string;
+    name: string;
+    price: number | string;
+    quantity: number;
+    chargeType: 'one-time' | 'per-night' | string;
+}
+
+interface PricingRule {
+    id: string;
+    name: string;
+    rule_type: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    is_active: boolean;
+}
+
+interface Tax {
+    id: string;
+    name: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    applies_to: 'room' | 'extras' | 'total';
+}
+
+
 export default function CalculatorPage() {
-    const [properties, setProperties] = useState<any[]>([]);
-    const [rooms, setRooms] = useState<any[]>([]);
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [rooms, setRooms] = useState<Room[]>([]);
     const [selectedProperty, setSelectedProperty] = useState('');
-    const [selectedRoom, setSelectedRoom] = useState<any>(null);
+    const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [checkIn, setCheckIn] = useState('');
     const [checkOut, setCheckOut] = useState('');
     const [guestName, setGuestName] = useState('');
     const [guestEmail, setGuestEmail] = useState('');
     const [guests, setGuests] = useState(1);
-    const [extras, setExtras] = useState<any[]>([]);
-    const [newExtra, setNewExtra] = useState({ name: '', price: '', quantity: 1, chargeType: 'one-time' });
-    const [pricingRules, setPricingRules] = useState<any[]>([]);
+    const [extras, setExtras] = useState<Extra[]>([]);
+    const [newExtra, setNewExtra] = useState<{ name: string; price: string; quantity: number; chargeType: 'one-time' | 'per-night' }>({ name: '', price: '', quantity: 1, chargeType: 'one-time' });
+    const [pricingRules, setPricingRules] = useState<PricingRule[]>([]);
     const [pricingMode, setPricingMode] = useState('auto');
     const [selectedRuleId, setSelectedRuleId] = useState('');
-    const [appliedRules, setAppliedRules] = useState<any[]>([]);
-    const [taxes, setTaxes] = useState<any[]>([]);
+    const [appliedRules, setAppliedRules] = useState<PricingRule[]>([]);
+    const [taxes, setTaxes] = useState<Tax[]>([]);
     const [selectedTaxIds, setSelectedTaxIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
@@ -55,6 +98,9 @@ export default function CalculatorPage() {
     const fetchData = async () => {
         try {
             const res = await fetch('/api/properties?fields=light');
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             setProperties(data.properties || []);
             if (data.properties?.length > 0 && !selectedProperty) {
@@ -68,6 +114,9 @@ export default function CalculatorPage() {
     const fetchRooms = async (propertyId: string) => {
         try {
             const res = await fetch(`/api/rooms?property_id=${propertyId}`);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             setRooms(data.rooms || []);
         } catch (error) {
@@ -78,6 +127,9 @@ export default function CalculatorPage() {
     const fetchPricingRules = async (propertyId: string) => {
         try {
             const res = await fetch(`/api/pricing-rules?property_id=${propertyId}`);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             if (data.success) {
                 setPricingRules(data.rules || []);
@@ -90,6 +142,9 @@ export default function CalculatorPage() {
     const fetchTaxes = async (propertyId: string) => {
         try {
             const res = await fetch(`/api/taxes?property_id=${propertyId}`);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             const fetchedTaxes = data.taxes || [];
             setTaxes(fetchedTaxes);
@@ -117,6 +172,10 @@ export default function CalculatorPage() {
     };
 
     const removeExtra = (id: string) => {
+        if (!id) {
+            console.error('Cannot remove extra: missing id');
+            return;
+        }
         setExtras(extras.filter(e => e.id !== id));
     };
 
@@ -125,7 +184,13 @@ export default function CalculatorPage() {
         if (!checkIn || !checkOut) return 0;
         const start = new Date(checkIn);
         const end = new Date(checkOut);
-        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffTime = end.getTime() - start.getTime();
+
+        // Validate check-out is after check-in
+        if (diffTime < 0) {
+            return -1; // Return -1 to indicate invalid date range
+        }
+
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return diffDays > 0 ? diffDays : 0;
     };
@@ -145,7 +210,9 @@ export default function CalculatorPage() {
 
     const rulesToApply = pricingMode === 'manual'
         ? pricingRules.filter(r => r.id === selectedRuleId)
-        : pricingRules.filter(r => r.is_active); // Simple auto logic for now, usually would check dates
+        : pricingMode === 'auto'
+            ? pricingRules.filter(r => r.is_active)
+            : []; // pricingMode === 'none' or other: no rules applied
 
     // In a real scenario, "auto" might select rules based on date overlap. 
     // For this calculator version, let's treat "auto" as "all active rules" or maybe "none" if we don't have date logic?
@@ -226,6 +293,11 @@ export default function CalculatorPage() {
     const handleSaveQuote = async () => {
         if (!selectedRoom || !checkIn || !checkOut || !guestName) {
             alert('Please fill in all required fields');
+            return;
+        }
+
+        if (nights === -1) {
+            alert('Check-out date must be after check-in date');
             return;
         }
 
@@ -430,6 +502,13 @@ export default function CalculatorPage() {
                                         />
                                     </div>
                                 </div>
+                                {nights === -1 && (
+                                    <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-lg">
+                                        <p className="text-sm font-semibold text-destructive text-center">
+                                            ⚠️ Check-out date must be after check-in date
+                                        </p>
+                                    </div>
+                                )}
                                 {nights > 0 && (
                                     <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
                                         <p className="text-sm font-semibold text-center">
@@ -491,8 +570,8 @@ export default function CalculatorPage() {
                                                 <p className="text-sm text-muted-foreground">
                                                     ${extra.price} × {extra.quantity}{extra.chargeType === 'per-night' ? ` × ${nights} nights` : ' (one-time)'} = ${(
                                                         extra.chargeType === 'per-night'
-                                                            ? extra.price * extra.quantity * nights
-                                                            : extra.price * extra.quantity
+                                                            ? Number(extra.price) * extra.quantity * nights
+                                                            : Number(extra.price) * extra.quantity
                                                     ).toFixed(2)}
                                                 </p>
                                             </div>
@@ -520,7 +599,7 @@ export default function CalculatorPage() {
                                     />
                                     <Select
                                         value={newExtra.chargeType}
-                                        onValueChange={(v) => setNewExtra({ ...newExtra, chargeType: v })}
+                                        onValueChange={(v) => setNewExtra({ ...newExtra, chargeType: v as 'one-time' | 'per-night' })}
                                     >
                                         <SelectTrigger>
                                             <SelectValue />

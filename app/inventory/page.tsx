@@ -65,8 +65,10 @@ export default function InventoryPage() {
         try {
             // Fetch properties
             const propsRes = await fetch('/api/properties');
-            const propsData = await propsRes.json();
-            setProperties(propsData.properties || []);
+            if (propsRes.ok) {
+                const propsData = await propsRes.json();
+                setProperties(propsData.properties || []);
+            }
 
             // Fetch all rooms
             const roomsRes = await fetch('/api/rooms');

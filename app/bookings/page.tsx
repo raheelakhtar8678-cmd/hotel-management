@@ -77,6 +77,9 @@ export default function BookingsPage() {
         setLoading(true);
         try {
             const res = await fetch('/api/bookings');
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             if (data.success) {
                 setBookings(data.bookings || []);

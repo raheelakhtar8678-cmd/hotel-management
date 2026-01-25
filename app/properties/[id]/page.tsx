@@ -42,12 +42,18 @@ export default function PropertyDetailPage({ params }: PageProps) {
         setLoading(true);
         try {
             const response = await fetch(`/api/properties?id=${id}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
 
             if (data.success && data.property) {
                 setProperty(data.property);
                 // Fetch rooms separately
                 const roomsResponse = await fetch(`/api/rooms?property_id=${id}`);
+                if (!roomsResponse.ok) {
+                    throw new Error(`HTTP error! status: ${roomsResponse.status}`);
+                }
                 const roomsData = await roomsResponse.json();
                 if (roomsData.success) {
                     setRooms(roomsData.rooms || []);

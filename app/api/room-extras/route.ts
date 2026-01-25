@@ -73,7 +73,7 @@ export async function POST(request: Request) {
             description
         } = body;
 
-        if (!room_id || !item_name || !price) {
+        if (!room_id || !item_name || price === null || price === undefined) {
             return NextResponse.json(
                 { success: false, error: 'Room ID, item name, and price are required' },
                 { status: 400 }

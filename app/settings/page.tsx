@@ -48,6 +48,9 @@ export default function SettingsPage() {
     const fetchProperties = async () => {
         try {
             const res = await fetch("/api/properties?fields=light");
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             if (data.properties) {
                 setProperties(data.properties);
@@ -64,6 +67,9 @@ export default function SettingsPage() {
         setLoading(true);
         try {
             const res = await fetch(`/api/taxes?property_id=${propertyId}`);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             if (data.taxes) setTaxes(data.taxes);
         } catch (e) {
@@ -97,10 +103,19 @@ export default function SettingsPage() {
     const handleDeleteTax = async (id: string) => {
         if (!confirm("Are you sure you want to delete this tax?")) return;
         try {
-            await fetch(`/api/taxes?id=${id}`, { method: "DELETE" });
-            fetchTaxes(selectedProperty);
+            const res = await fetch(`/api/taxes?id=${id}`, { method: "DELETE" });
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            const data = await res.json();
+            if (data.success) {
+                fetchTaxes(selectedProperty);
+            } else {
+                alert(data.error || "Failed to delete tax");
+            }
         } catch (e) {
             console.error("Error deleting tax", e);
+            alert("Failed to delete tax");
         }
     };
 
@@ -108,6 +123,9 @@ export default function SettingsPage() {
     const fetchApiKeys = async () => {
         try {
             const res = await fetch("/api/api-keys");
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             if (data.keys) setApiKeys(data.keys);
             if (data.needsMigration) {
@@ -150,10 +168,19 @@ export default function SettingsPage() {
     const handleDeleteApiKey = async (id: string) => {
         if (!confirm("Are you sure you want to revoke this API key? This cannot be undone.")) return;
         try {
-            await fetch(`/api/api-keys?id=${id}`, { method: "DELETE" });
-            fetchApiKeys();
+            const res = await fetch(`/api/api-keys?id=${id}`, { method: "DELETE" });
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            const data = await res.json();
+            if (data.success) {
+                fetchApiKeys();
+            } else {
+                alert(data.error || "Failed to delete API key");
+            }
         } catch (e) {
             console.error("Error deleting API key", e);
+            alert("Failed to delete API key");
         }
     };
 
