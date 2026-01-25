@@ -15,6 +15,13 @@ export async function GET(request: Request) {
             const { rows } = await sql`SELECT * FROM properties WHERE id = ${id} LIMIT 1`;
             const property = rows[0];
 
+            if (!property) {
+                return NextResponse.json(
+                    { success: false, error: 'Property not found' },
+                    { status: 404 }
+                );
+            }
+
             return NextResponse.json({
                 success: true,
                 property
@@ -33,8 +40,8 @@ export async function GET(request: Request) {
                 properties: rows || []
             });
         } else {
-            // Fetch all properties with full details (default)
-            const { rows } = await sql`SELECT * FROM properties ORDER BY created_at DESC`;
+            // Fetch all properties with full details (default) - filter active only for consistency
+            const { rows } = await sql`SELECT * FROM properties WHERE is_active = true ORDER BY created_at DESC`;
 
             return NextResponse.json({
                 success: true,
@@ -116,16 +123,23 @@ export async function POST(request: Request) {
         const property = result.rows[0];
         console.log('✅ [API] Property created:', property);
 
-        // Create default room
+        // Create default room with transactional rollback on failure
         console.log('🛏️ [API] Creating default room...');
-        await sql`
-            INSERT INTO rooms (
-                property_id, type, status, current_price
-            ) VALUES (
-                ${property.id}, 'Standard', 'available', ${base_price}
-            )
-        `;
-        console.log('✅ [API] Default room created');
+        try {
+            await sql`
+                INSERT INTO rooms (
+                    property_id, type, status, current_price
+                ) VALUES (
+                    ${property.id}, 'Standard', 'available', ${base_price}
+                )
+            `;
+            console.log('✅ [API] Default room created');
+        } catch (roomError) {
+            console.error('❌ [API] Room creation failed, rolling back property:', roomError);
+            // Rollback: delete the created property
+            await sql`DELETE FROM properties WHERE id = ${property.id}`;
+            throw new Error('Failed to create default room. Property creation rolled back.');
+        }
 
         return NextResponse.json({
             success: true,
@@ -136,8 +150,8 @@ export async function POST(request: Request) {
         return NextResponse.json(
             {
                 success: false,
-                error: error instanceof Error ? error.message : 'Failed to create property',
-                details: error instanceof Error ? error.stack : undefined
+                error: error instanceof Error ? error.message : 'Failed to create property'
+                // Removed stack trace exposure for security
             },
             { status: 500 }
         );
@@ -174,6 +188,13 @@ export async function PATCH(request: Request) {
             RETURNING *
         `;
 
+        if (rows.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Property not found' },
+                { status: 404 }
+            );
+        }
+
         return NextResponse.json({
             success: true,
             property: rows[0]
@@ -202,11 +223,19 @@ export async function DELETE(request: Request) {
             );
         }
 
-        await sql`
+        const { rows } = await sql`
             UPDATE properties 
             SET is_active = false, archived_at = NOW()
             WHERE id = ${id}
+            RETURNING id
         `;
+
+        if (rows.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Property not found' },
+                { status: 404 }
+            );
+        }
 
         return NextResponse.json({
             success: true,
