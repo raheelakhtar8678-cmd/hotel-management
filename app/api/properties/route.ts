@@ -8,9 +8,10 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
+        const fields = searchParams.get('fields');
 
         if (id) {
-            // Fetch single property
+            // Fetch single property - always return full details
             const { rows } = await sql`SELECT * FROM properties WHERE id = ${id} LIMIT 1`;
             const property = rows[0];
 
@@ -18,8 +19,21 @@ export async function GET(request: Request) {
                 success: true,
                 property
             });
+        } else if (fields === 'light') {
+            // Fetch lightweight property list for dropdowns/selectors
+            const { rows } = await sql`
+                SELECT id, name, base_price, is_active 
+                FROM properties 
+                WHERE is_active = true 
+                ORDER BY created_at DESC
+            `;
+
+            return NextResponse.json({
+                success: true,
+                properties: rows || []
+            });
         } else {
-            // Fetch all properties
+            // Fetch all properties with full details (default)
             const { rows } = await sql`SELECT * FROM properties ORDER BY created_at DESC`;
 
             return NextResponse.json({

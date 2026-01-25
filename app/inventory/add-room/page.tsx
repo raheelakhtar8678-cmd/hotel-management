@@ -43,7 +43,7 @@ export default function AddRoomPage() {
 
     const fetchProperties = async () => {
         try {
-            const response = await fetch('/api/properties');
+            const response = await fetch('/api/properties?fields=light');
             const data = await response.json();
             setProperties(data.properties || []);
         } catch (error) {
@@ -274,8 +274,8 @@ export default function AddRoomPage() {
                                             type="button"
                                             onClick={() => setActiveImageIndex(idx)}
                                             className={`relative w-16 h-16 rounded-lg border-2 overflow-hidden transition-all ${activeImageIndex === idx
-                                                    ? 'border-primary ring-2 ring-primary/30'
-                                                    : 'border-transparent hover:border-primary/50'
+                                                ? 'border-primary ring-2 ring-primary/30'
+                                                : 'border-transparent hover:border-primary/50'
                                                 } ${img ? '' : 'bg-secondary/30'}`}
                                         >
                                             {img ? (

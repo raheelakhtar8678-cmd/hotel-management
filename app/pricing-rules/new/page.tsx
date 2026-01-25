@@ -126,7 +126,7 @@ function PricingRuleForm() {
 
     const fetchProperties = async () => {
         try {
-            const response = await fetch('/api/properties');
+            const response = await fetch('/api/properties?fields=light');
             const data = await response.json();
             setProperties(data.properties || []);
         } catch (error) {

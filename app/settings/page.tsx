@@ -47,7 +47,7 @@ export default function SettingsPage() {
 
     const fetchProperties = async () => {
         try {
-            const res = await fetch("/api/properties");
+            const res = await fetch("/api/properties?fields=light");
             const data = await res.json();
             if (data.properties) {
                 setProperties(data.properties);

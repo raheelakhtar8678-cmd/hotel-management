@@ -54,7 +54,7 @@ export default function CalculatorPage() {
 
     const fetchData = async () => {
         try {
-            const res = await fetch('/api/properties');
+            const res = await fetch('/api/properties?fields=light');
             const data = await res.json();
             setProperties(data.properties || []);
             if (data.properties?.length > 0 && !selectedProperty) {
