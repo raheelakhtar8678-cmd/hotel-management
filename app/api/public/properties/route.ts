@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        // Get all active properties with room counts
+        // Get all properties with room counts
         const { rows: properties } = await sql`
             SELECT 
                 p.id,
@@ -24,15 +24,14 @@ export async function GET() {
                 p.property_type,
                 p.currency,
                 COALESCE(
-                    (SELECT MIN(r.base_price) FROM rooms r WHERE r.property_id = p.id AND r.is_active = true),
+                    (SELECT MIN(r.base_price) FROM rooms r WHERE r.property_id = p.id),
                     0
                 ) as min_price,
                 COALESCE(
-                    (SELECT COUNT(*) FROM rooms r WHERE r.property_id = p.id AND r.is_active = true),
+                    (SELECT COUNT(*) FROM rooms r WHERE r.property_id = p.id),
                     0
                 ) as room_count
             FROM properties p
-            WHERE p.is_active = true
             ORDER BY p.name ASC
         `;
 
