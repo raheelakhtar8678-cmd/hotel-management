@@ -42,7 +42,8 @@ export async function GET(
         const { rows: rooms } = await sql`
             SELECT id, name, type, base_price, image_url, max_guests, amenities, status
             FROM rooms 
-            WHERE property_id = ${property.id} AND is_active = true
+            WHERE property_id = ${property.id} 
+            AND (is_active = true OR is_active IS NULL)
             ORDER BY base_price ASC
         `;
 
@@ -56,6 +57,8 @@ export async function GET(
             AND status = 'confirmed'
         `;
 
+        console.log(`Found property: ${property.name}, Rooms count: ${rooms.length}`);
+
         return NextResponse.json({
             success: true,
             property: {
@@ -68,16 +71,32 @@ export async function GET(
                 image_url: property.image_url,
                 currency: property.currency || 'USD'
             },
-            rooms: rooms.map(room => ({
-                id: room.id,
-                name: room.name,
-                type: room.type,
-                basePrice: room.base_price,
-                imageUrl: room.image_url,
-                maxGuests: room.max_guests,
-                amenities: room.amenities || [],
-                status: room.status
-            })),
+            rooms: rooms.map(room => {
+                // Parse amenities - could be string or array
+                let amenitiesList = [];
+                if (room.amenities) {
+                    if (typeof room.amenities === 'string') {
+                        try {
+                            amenitiesList = JSON.parse(room.amenities);
+                        } catch {
+                            amenitiesList = room.amenities.split(',').map((a: string) => a.trim());
+                        }
+                    } else if (Array.isArray(room.amenities)) {
+                        amenitiesList = room.amenities;
+                    }
+                }
+
+                return {
+                    id: room.id,
+                    name: room.name,
+                    type: room.type,
+                    basePrice: room.base_price,
+                    imageUrl: room.image_url,
+                    maxGuests: room.max_guests,
+                    amenities: amenitiesList,
+                    status: room.status
+                };
+            }),
             bookedDates: bookings.map(b => ({
                 roomId: b.room_id,
                 checkIn: b.check_in,
