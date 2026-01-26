@@ -95,11 +95,13 @@ export default function BookingPage() {
         setSubmitting(true);
 
         try {
-            const res = await fetch('/api/public/inquiry', {
+            // Calculate total price
+            const totalAmount = estimatedTotal;
+
+            const res = await fetch('/api/public/book', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    property_id: property?.id,
                     room_id: selectedRoom,
                     guest_name: guestName,
                     guest_email: guestEmail,
@@ -107,19 +109,21 @@ export default function BookingPage() {
                     check_in: checkIn,
                     check_out: checkOut,
                     guests,
-                    message
+                    notes: message,
+                    total_amount: totalAmount
                 })
             });
 
             const data = await res.json();
 
-            if (data.success) {
-                setSubmitted(true);
+            if (data.success && data.booking) {
+                // Redirect to receipt page
+                window.location.href = `/receipts/${data.booking.id}`;
             } else {
-                alert(data.error || 'Failed to submit inquiry');
+                alert(data.error || 'Failed to create booking');
             }
         } catch (err) {
-            alert('Failed to submit inquiry');
+            alert('Failed to create booking. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -322,7 +326,7 @@ export default function BookingPage() {
                             <CardHeader className="bg-gradient-to-r from-primary to-cyan-500 text-white rounded-t-lg">
                                 <CardTitle className="flex items-center gap-2">
                                     <Calendar className="h-5 w-5" />
-                                    Request to Book
+                                    Book Your Stay
                                 </CardTitle>
                                 <CardDescription className="text-white/80">
                                     Book direct and save on fees
@@ -428,13 +432,13 @@ export default function BookingPage() {
                                         {submitting ? (
                                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                         ) : (
-                                            <Send className="h-4 w-4 mr-2" />
+                                            <Calendar className="h-4 w-4 mr-2" />
                                         )}
-                                        {submitting ? 'Sending...' : 'Send Inquiry'}
+                                        {submitting ? 'Creating Booking...' : 'Book Now'}
                                     </Button>
 
                                     <p className="text-xs text-muted-foreground text-center">
-                                        No payment required - the owner will confirm your booking
+                                        Your booking will be confirmed immediately
                                     </p>
                                 </form>
                             </CardContent>

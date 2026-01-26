@@ -38,12 +38,12 @@ export async function GET(
 
         const property = properties[0];
 
-        // Get rooms for this property
+        // Get available rooms for this property
         const { rows: rooms } = await sql`
             SELECT id, name, type, base_price, image_url, max_guests, amenities, status
             FROM rooms 
             WHERE property_id = ${property.id} 
-            AND (is_active = true OR is_active IS NULL)
+            AND status = 'available'
             ORDER BY base_price ASC
         `;
 
