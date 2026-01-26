@@ -38,14 +38,16 @@ export async function GET(
 
         const property = properties[0];
 
-        // Get available rooms for this property
+        // Get available rooms for this property (includes rooms with no status set)
         const { rows: rooms } = await sql`
             SELECT id, name, type, base_price, image_url, max_guests, amenities, status
             FROM rooms 
             WHERE property_id = ${property.id} 
-            AND status = 'available'
+            AND (status = 'available' OR status IS NULL)
             ORDER BY base_price ASC
         `;
+
+        console.log(`Property: ${property.name}, Total rooms found: ${rooms.length}`);
 
         // Get confirmed bookings for availability check (next 90 days)
         const { rows: bookings } = await sql`
